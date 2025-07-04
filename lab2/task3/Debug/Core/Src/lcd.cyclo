@@ -1,0 +1,6 @@
+../Core/Src/lcd.c:5:6:coast_lcd_init	1
+../Core/Src/lcd.c:41:6:LCD_Pulse	1
+../Core/Src/lcd.c:48:6:LCD_PutNibble	1
+../Core/Src/lcd.c:59:6:LCD_SendCmd	1
+../Core/Src/lcd.c:67:6:LCD_SendData	1
+../Core/Src/lcd.c:76:6:LCD_SendStr	2
