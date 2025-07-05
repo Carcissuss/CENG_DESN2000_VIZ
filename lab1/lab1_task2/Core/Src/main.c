@@ -91,16 +91,41 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  uint16_t integer = 0b1110000000000000;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+   	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+   	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
+   	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+   	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+
+   	    GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_3;
+   	    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+   	    GPIO_InitStruct.Pull = GPIO_NOPULL;
+   	    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+   	    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+   	    int upperNibble = (integer);
+
+   	    int LED_PINS[4] = {GPIO_PIN_3, GPIO_PIN_5, GPIO_PIN_4, GPIO_PIN_10};
+
   while (1)
   {
     /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-  }
+	/* USER CODE BEGIN 3 */
+	  	  for (int i = 0; i < 4; i++) {
+	 		  if (upperNibble & (1 << (3 - i))) {
+	 			  HAL_GPIO_WritePin(GPIOB, LED_PINS[i], GPIO_PIN_SET);
+	 		  } else {
+	 			 HAL_GPIO_WritePin(GPIOB, LED_PINS[i], GPIO_PIN_RESET);
+	 		  }
+	  	  }
+}
   /* USER CODE END 3 */
 }
 

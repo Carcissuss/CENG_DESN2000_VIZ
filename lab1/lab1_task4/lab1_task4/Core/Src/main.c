@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "sendToShiftRegister.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,7 +65,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -75,6 +74,7 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
+	uint16_t counter = 127;
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -87,7 +87,21 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
+  	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+  	 	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
+  	 	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+  	 	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+
+  	 	    GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_3;
+  	 	    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  	 	    GPIO_InitStruct.Pull = GPIO_NOPULL;
+  	 	    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  	 	    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  init();
+
+  sendToShiftRegister(counter);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -97,9 +111,38 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  //if (counter >= 0 && counter <= 0b1111111111111111) {
+		  if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1)) {
+			  	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 1);
+			  	  if (!(counter == 0)) {
+			  		  counter--;
+			  	  }
+		  		  sendToShiftRegister(counter);
+		  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 0);
+		  } else if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)) {
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, 1);
+			  if (!(counter == 65535)) {
+				  counter++;
+			  }
+		  		  sendToShiftRegister(counter);
+		  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, 0);
+		  } else if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0)) {
+			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, 1);
+		  		  counter = 127;
+		  		 sendToShiftRegister(counter);
+		  		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, 0);
+		  } else if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1)) {
+			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, 1);
+		  		 counter = 65535;
+		  		 sendToShiftRegister(counter);
+		  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, 0);
+		  }
+	  //}
   }
   /* USER CODE END 3 */
 }
+
+
 
 /**
   * @brief System Clock Configuration
@@ -188,6 +231,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 
 /* USER CODE END 4 */
 
