@@ -14,9 +14,13 @@ uint8_t scan_keypad(){
 		HAL_GPIO_WritePin(KEY_COL_Port, Col_Pin[c], 1);
 		for (int r=0; r<4; r++) {
 			if (HAL_GPIO_ReadPin(KEY_ROW_Port, Row_Pin[r]) == 1) {
-				ret = key_map[r][c];
+				HAL_Delay(100);
+				if (HAL_GPIO_ReadPin(KEY_ROW_Port, Row_Pin[r]) == 1) {
+					ret = key_map[r][c];
+				}
 			}
 		}
+		HAL_GPIO_WritePin(KEY_COL_Port, Col_Pin[c], 0);
 	}
 	return ret;
 }

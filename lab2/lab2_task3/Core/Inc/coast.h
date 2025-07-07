@@ -17,7 +17,6 @@
 
 #define LCD_RW_Port GPIOC
 #define LCD_RW_Pin GPIO_PIN_6
-
 //...
 
 #define KEY_ROW_Port GPIOB
@@ -32,13 +31,6 @@
 #define KEY_COL3_Pin GPIO_PIN_10
 #define KEY_COL4_Pin GPIO_PIN_11
 
-#define SW1_Port GPIOA
-#define SW1_Pin GPIO_PIN_1
-#define LED_Port GPIOB
-#define LED1_Pin GPIO_PIN_10
-#define LED2_Pin GPIO_PIN_4
-#define LED3_Pin GPIO_PIN_5
-#define LED4_Pin GPIO_PIN_3
 //...
 
 // call this at the end of MX_GPIO_Init() in main.c
