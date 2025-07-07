@@ -22,7 +22,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "coast.h"
-#include "lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -84,7 +83,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  coast_lcd_init();
 
   /* USER CODE END SysInit */
 
@@ -92,9 +90,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  LCD_SendData((uint8_t)'A');
-  HAL_GPIO_WritePin(LED_Port, LED1_Pin, 1);
-  HAL_GPIO_WritePin(LED_Port, LED2_Pin, 0);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -102,10 +98,6 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  HAL_GPIO_TogglePin(LED_Port, LED1_Pin);
-	  HAL_Delay(1000);
-	  HAL_GPIO_TogglePin(LED_Port, LED2_Pin);
-	  HAL_Delay(1000);
 	  coast_loop_body();
     /* USER CODE BEGIN 3 */
   }
@@ -210,7 +202,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
+
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
@@ -229,7 +221,6 @@ static void MX_GPIO_Init(void)
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   coast_gpio_init();
-
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
