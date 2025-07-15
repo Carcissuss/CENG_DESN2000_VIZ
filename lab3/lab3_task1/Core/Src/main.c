@@ -44,7 +44,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		if (counter <= INT16_MAX / 2) {
 			counter += counter;
 		}
-	} else if (GPIO_Pin == SW2_Pin && counter > 5) {
+	} else if (GPIO_Pin == SW2_Pin && counter > INT16_MIN) {
 		counter -= 5;
 	} else if (GPIO_Pin == SW3_Pin) {
 		counter = 1;
