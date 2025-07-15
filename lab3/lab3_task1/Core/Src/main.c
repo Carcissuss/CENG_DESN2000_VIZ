@@ -120,7 +120,7 @@ int main(void)
 	  		counter = INT16_MAX;
 	  		coast_loop_body(counter);
 	  		HAL_Delay(250);
-	  		while (HAL_GPIO_ReadPin(SW4_GPIO_Port, SW4_Pin) == GPIO_PIN_SET);
+	  		//while (HAL_GPIO_ReadPin(SW4_GPIO_Port, SW4_Pin) == GPIO_PIN_SET);
 	  	}
   }
   /* USER CODE END 3 */
