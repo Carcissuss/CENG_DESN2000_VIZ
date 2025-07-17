@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/lab2/lab2_task3/Core/Inc",
+                "C:/Users/zhaoj/STM32Cube/Repository/STM32Cube_FW_F3_V1.11.5/Drivers/CMSIS/Core/include",
+                "C:/Users/zhaoj/STM32Cube/Repository/STM32Cube_FW_F3_V1.11.5/Drivers/STM32F3xx_HAL_Driver/Inc",
+                "C:/Users/zhaoj/STM32Cube/Repository/STM32Cube_FW_F3_V1.11.5/Drivers/STM32F3xx_HAL_Driver/Inc/Legacy",
+                "C:/Users/zhaoj/STM32Cube/Repository/STM32Cube_FW_F3_V1.11.5/Drivers/CMSIS/Device/ST/STM32F3xx/Include",
+                "C:/Users/zhaoj/STM32Cube/Repository/STM32Cube_FW_F3_V1.11.5/Drivers/CMSIS/Include"
+            ],
+            "defines": [
+                "STM32F303xE",
+                "USE_HAL_DRIVER"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}
