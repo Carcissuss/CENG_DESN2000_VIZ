@@ -25,6 +25,8 @@
 #include "lcd.h"
 #include "state.h"
 #include "time.h"
+#include "interrupt.h"
+#include "buzzer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,13 +46,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 RTC_HandleTypeDef hrtc;
-uint32_t lastTick = 0;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
+uint32_t lastTick = 0;
 uint32_t seconds = 0;
 uint32_t period_count = 0;
 uint32_t decimal_second_count = 0;
@@ -67,7 +69,7 @@ bool buttonB = false;
 uint32_t double_press_interval = 10;
 uint32_t holding_bound = 15;
 /* press check */
-bool is_first_press[4];
+bool is_single_press[4];
 bool is_double_press[4];
 bool is_holding[4];
 
@@ -113,27 +115,116 @@ static void MX_RTC_Init(void);
 /* USER CODE BEGIN 0 */
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin == SW2_Pin) {
-		currentScreen = HOME;
-	} else if (GPIO_Pin == SW1_Pin) {
-		switch (currentScreen){
-			case ALARM:
-				currentScreen = TIME;
-				break;
-		}
-	} else if (GPIO_Pin == SW3_Pin) {
-		switch (currentScreen) {
+	if (GPIO_Pin == B1_Pin) {
+			/* B1 is pressed */
+			if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1) {
+				/* sound indication */
+				if (enable_sound) {
+					generate_sound(300,50,htim1);
+				}
+				switch (currentScreen) {
+				case HOME:
+					currentScreen = TIME;
+					break;
+				}
+				check_double_press(0, is_single_press, is_double_press, is_holding,
+						decimal_second_count, double_press_interval,
+						button_double_press_time, button_holding_time);
+			}
+			/* B1 is released */
+			else {
+				stop_sound(htim1);
+				check_holding(0,
+				              is_single_press,
+				              is_double_press,
+				              is_holding,
+				              decimal_second_count,
+				              holding_bound,
+				              button_double_press_time,
+							  button_holding_time);
+			}
+		} else if (GPIO_Pin == SW1_Pin) {
+			/* The sw1 pin is pressed */
+			if (HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == 1) {
+				/* sound indication */
+				if (enable_sound) {
+					generate_sound(300,50,htim1);
+				}
+				switch (currentScreen){
+					case ALARM:
+						currentScreen = TIME;
+						break;
+				}
+				check_double_press(1, is_single_press, is_double_press, is_holding,
+						decimal_second_count, double_press_interval,
+						button_double_press_time, button_holding_time);
+			}
+			/* The sw1 pin is released */
+			else {
+				stop_sound(htim1);
+				check_holding(1,
+							  is_single_press,
+							  is_double_press,
+							  is_holding,
+							  decimal_second_count,
+							  holding_bound,
+							  button_double_press_time,
+							  button_holding_time);
+			}
+		} else if (GPIO_Pin == SW2_Pin) {
+			/* The sw2 pin is pressed */
+			if (HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == 1) {
+				/* sound indication */
+				if (enable_sound) {
+					generate_sound(300,50,htim1);
+				}
+				currentScreen = HOME;
+				check_double_press(2, is_single_press, is_double_press, is_holding,
+						decimal_second_count, double_press_interval,
+						button_double_press_time, button_holding_time);
+			}
+
+			/* The sw2 pin is released */
+			else {
+				stop_sound(htim1);
+				check_holding(2,
+							  is_single_press,
+							  is_double_press,
+							  is_holding,
+							  decimal_second_count,
+							  holding_bound,
+							  button_double_press_time,
+							  button_holding_time);
+			}
+		} else {
+			/* The sw3 pin is pressed */
+			if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == 1) {
+				/* sound indication */
+				if (enable_sound) {
+					generate_sound(300,50,htim1);
+				}
+				switch (currentScreen) {
 				case TIME:
 					currentScreen = ALARM;
 					break;
 				}
-	} else if (GPIO_Pin == B1_Pin) {
-		switch (currentScreen) {
-		case HOME:
-			currentScreen = TIME;
-			break;
+				check_double_press(3, is_single_press, is_double_press, is_holding,
+						decimal_second_count, double_press_interval,
+						button_double_press_time, button_holding_time);
+			}
+			/* The sw3 pin is released */
+			else {
+				stop_sound(htim1);
+				check_holding(2,
+							  is_single_press,
+							  is_double_press,
+							  is_holding,
+							  decimal_second_count,
+							  holding_bound,
+							  button_double_press_time,
+							  button_holding_time);
+			}
 		}
-	}
 }
 /* USER CODE END 0 */
 
@@ -192,16 +283,21 @@ int main(void)
 	  	switch (currentScreen) {
 	  		case HOME:
 	  			homePage(); // draw layout only
+	  			updateTime(1, 4);
 	  			break;
 	  		case TIME:
 	  			timePage();
+	  			updateTime(0, 4);
 	  			break;
 	  	}
 	  	previousScreen = currentScreen;
+
 	  	lastTick = HAL_GetTick();  // reset update clock
 	  }
-
+	    HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, 1);
+	  /* UPDATE TIME EVERY SECOND ELAPSED */
 	  if (HAL_GetTick() - lastTick >= 1000) {
+
 	  	switch (currentScreen) {
 	  		case HOME:
 	  			updateTime(1, 4);  // row 1 (second line), column 4
@@ -341,8 +437,7 @@ static void MX_RTC_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-  sTime.Hours = 0x9;
-  sTime.Minutes = 0x45;
+
   /* USER CODE END RTC_Init 2 */
 
 }
