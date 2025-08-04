@@ -1,0 +1,6 @@
+../Core/Src/time.c:21:7:setLabTimer	1
+../Core/Src/time.c:30:6:showLabTimer	6
+../Core/Src/time.c:55:6:labTimersToStr	1
+../Core/Src/time.c:63:6:strToLabTimers	4
+../Core/Src/time.c:81:7:updateLabTimer	11
+../Core/Src/time.c:124:6:isFinishedLabTimer	3

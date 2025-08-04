@@ -1,3 +1,11 @@
+/*
+ * lcd.c
+ *
+ *  Created on: Aug 2, 2025
+ *      Author: Zhaoji Gou
+ */
+
+
 #include "main.h"
 #include "coast.h"
 #include "lcd.h"
@@ -73,9 +81,21 @@ void LCD_SendData(uint8_t c){
 	HAL_GPIO_WritePin(LCD_RS_Port, LCD_RS_Pin, 0);
 }
 
+// send string to LCD data
 void LCD_SendStr(char *str){
 	for (int i = 0; str[i]; i++) {
+		if (i == 16) {
+			LCD_SendCmd(LCD_SECOND_LINE);
+		}
 		LCD_SendData((uint8_t)str[i]);
-		HAL_Delay(1);
+	}
+}
+
+void LCD_SendTime(const char *str) {
+	for (int i = 0; str[i]; i++) {
+		if (i == 15) {
+			LCD_SendCmd(LCD_SECOND_LINE);
+		}
+		LCD_SendData((uint8_t)str[i]);
 	}
 }

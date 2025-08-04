@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "coast.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,8 +41,56 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
+uint32_t seconds = 0;
+uint32_t period_count = 0;
+uint32_t decimal_second_count = 0;
+uint32_t button_double_press_time[4];
+uint32_t button_holding_time[4];
+
+/* button press check */
+bool button1 = false;
+bool button2 = false;
+bool button3 = false;
+bool buttonB = false;
+
+/* double press interval and holding time */
+uint32_t double_press_interval = 10;
+uint32_t holding_bound = 15;
+/* press check */
+bool is_first_press[4];
+bool is_double_press[4];
+bool is_holding[4];
+
+/* sound setting */
+bool enable_sound = true;
+bool enable_vibration = true;
+
+/* screen navigation */
+typedef struct {
+	bool screen_homepage;
+	bool sceen_countdown;
+	bool screen_stopwatch;
+	bool screen_alarm;
+	bool screen_setting_1;
+	bool screen_setting_2;
+}Navigation;
+
+Navigation screen = {
+    .screen_homepage = true,
+    .sceen_countdown = false,
+    .screen_stopwatch = false,
+    .screen_alarm = false,
+    .screen_setting_1 = false,
+    .screen_setting_2 = false
+};
+
+/*  */
+
+/* Private functions ---------------------------------------------------------*/
 
 /* USER CODE END PV */
 
@@ -50,8 +98,10 @@ TIM_HandleTypeDef htim1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM6_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
-
+extern void coast_asm_delay(uint32_t milliseconds);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -89,8 +139,16 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM1_Init();
+  MX_TIM6_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
 
+  for (int i =0 ; i < 4; i++) {
+	  button_double_press_time[i] = 0;
+	  button_holding_time[i] = 0;
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -173,7 +231,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 999;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 276;
+  htim1.Init.Period = 296;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -198,7 +256,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 198;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -231,26 +289,287 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 9999;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 7199;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 999;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 71;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : SW1_Pin SW2_Pin */
+  GPIO_InitStruct.Pin = SW1_Pin|SW2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SW3_Pin */
+  GPIO_InitStruct.Pin = SW3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SW3_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-
+	coast_gpio_init();
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == B1_Pin) {
+		/* B1 is pressed */
+		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1) {
+			/* sound indication */
+			if (sound_enable) {
+				generate_sound(300,50,&htim1);
+			}
+			if (is_first_press[0] == true && is_double_press[0] == false &&
+				(decimal_second_count - button_double_press_time[0]) <= double_press_interval) {
+				is_double_press[0] = true;
+				is_holding[0] = false;
+				is_single_press[0] = false;
+			} else {
+				is_single_press[0] = true;
+				is_holding[0] = false
+				is_double_press[0] = false;
+			}
+			button_holding_time[0] = decimal_second_count;
+		}
+		/* B1 is released */
+		else {
+			stop_sound(&htim1);
+			if ((decimal_second_count - button_holding_time[0]) >= holding_bound) {
+				is_holding[0] = true;
+				is_double_press[0] = false;
+				is_single_press[0] = false;
+			} else {
+				button_double_press_time[0] = decimal_second_count;
+			}
+		}
+	} else if (GPIO_Pin == SW1_Pin) {
+		/* The sw1 pin is pressed */
+		if (HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == 1) {
+			/* sound indication */
+			if (sound_enable) {
+				generate_sound(300,50,&htim1);
+			}
+			if (is_first_press[1] == true && is_double_press[1] == false &&
+				(decimal_second_count - button_double_press_time[1]) <= double_press_interval) {
+				is_double_press[1] = true;
+				is_single_press[1] = false;
+			} else {
+				is_single_press[1] = true;
+				is_double_press[1] = false;
+			}
+			button_holding_time[1] = decimal_second_count;
 
+		}
+		/* The sw1 pin is released */
+		else {
+			stop_sound(&htim1);
+			if ((decimal_second_count - button_holding_time[1]) >= holding_bound) {
+				is_holding[1] = true;
+				button_double_press_time[0] = 0;
+				is_single_press[1] = false;
+			} else {
+				button_double_press_time[1] = decimal_second_count;
+			}
+		}
+	} else if (GPIO_Pin == SW2_Pin) {
+		/* The sw2 pin is pressed */
+		if (HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == 1) {
+			/* sound indication */
+			if (sound_enable) {
+				generate_sound(300,50,&htim1);
+			}
+			if (is_first_press[2] == true && is_double_press[2] == false &&
+				( decimal_second_count - button_double_press_counting[2]) <= double_press_interval) {
+				is_single_press[2] = false;
+				is_double_press[2] = true;
+			} else {
+				is_single_press[2] = true;
+				is_double_press[2] = false;
+			}
+			/* start counting the holding and double press */
+			button_holding_time[2] = decimal_second_count;
+		}
+
+		/* The sw2 pin is released */
+		else {
+			if ((decimal_second_count - button_holding_time[2]) >= holding_bound) {
+				is_holding[2] = true;
+				button_double_press_counting[2] = 0;
+			} else {
+				button_double_press_counting[2] = decimal_second_count;
+			}
+
+		}
+	} else {
+		/* The sw3 pin is pressed */
+		if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == 1) {
+			/* sound indication */
+			if (sound_enable) {
+				generate_sound(300,50,&htim1);
+			}
+			if (is_first_press[3] == true && is_double_press[3] == false &&
+				( decimal_second_count - button_double_press_counting[2]) <= double_press_interval) {
+				is_single_press[3] = false;
+				is_double_press[3] = true;
+			} else {
+				is_single_press[3] = true;
+				is_double_press[3] = false;
+				/* only start counting when first_press is done and reset the double count */
+			}
+			button_holding_time[3] = decimal_second_count;
+		}
+		/* The sw3 pin is released */
+		else {
+			stop_sound(&htim1);
+			if ((decimal_second_count - button_holding_time[3]) >= holding_bound) {
+				is_holding[3] = true;
+				button_double_press_counting[3] = 0;
+			} else {
+				button_double_press_counting[3] = decimal_second_count;
+			}
+		}
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim == &htim6) {
+		/* increment 1 second to count the time for entire project */
+		seconds++;
+	} else if (htim == &htim7) {
+		/* increment 1 millisecond to control the brightness of 16 serial LEDS */
+		if (period_count >= 100) {
+			decimal_second_count++; // every 100 millisecond or 0.1 second increment 1;
+			period_count = 1;
+		} else {
+			period_count++;
+		}
+
+		if (period_count == duty_cycle) {
+			HAL_GPIO_WritePin(SFT_SER_GPIO_Port, SFT_SER_Pin, GPIO_PIN_RESET);
+			for (int i = 0; i < 16; i++) {
+				HAL_GPIO_WritePin(SFT_SRCLK_GPIO_Port, SFT_SRCLK_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(SFT_SRCLK_GPIO_Port, SFT_SRCLK_Pin, GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(SFT_RCLK_GPIO_Port, SFT_RCLK_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(SFT_RCLK_GPIO_Port, SFT_RCLK_Pin, GPIO_PIN_RESET);
+		} else if (period_count == 0) {
+			HAL_GPIO_WritePin(SFT_SER_GPIO_Port, SFT_SER_Pin, GPIO_PIN_SET);
+			for (int i = 0; i < 16; i++) {
+				HAL_GPIO_WritePin(SFT_SRCLK_GPIO_Port, SFT_SRCLK_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(SFT_SRCLK_GPIO_Port, SFT_SRCLK_Pin, GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(SFT_RCLK_GPIO_Port, SFT_RCLK_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(SFT_RCLK_GPIO_Port, SFT_RCLK_Pin, GPIO_PIN_RESET);
+		}
+	}
+}
 /* USER CODE END 4 */
 
 /**

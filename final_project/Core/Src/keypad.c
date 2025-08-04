@@ -1,3 +1,10 @@
+/*
+ * keypad.c
+ *
+ *  Created on: Aug 2, 2025
+ *      Author: Zhaoji Gou
+ */
+
 #include "coast.h"
 
 uint8_t scan_keypad(){
@@ -14,14 +21,10 @@ uint8_t scan_keypad(){
 		HAL_GPIO_WritePin(KEY_COL_Port, Col_Pin[c], 1);
 		for (int r=0; r<4; r++) {
 			if (HAL_GPIO_ReadPin(KEY_ROW_Port, Row_Pin[r]) == 1) {
-				// debounce check
-				HAL_Delay(100);
-				if (HAL_GPIO_ReadPin(KEY_ROW_Port, Row_Pin[r]) == 1) {
-					ret = key_map[r][c];
-				}
+				ret = key_map[r][c];
 			}
 		}
-		HAL_GPIO_WritePin(KEY_COL_Port, Col_Pin[c], 0);
 	}
 	return ret;
 }
+
