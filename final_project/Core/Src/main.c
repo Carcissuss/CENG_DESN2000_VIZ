@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "coast.h"
+#include "interrupt.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -426,28 +427,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (sound_enable) {
 				generate_sound(300,50,&htim1);
 			}
-			if (is_first_press[0] == true && is_double_press[0] == false &&
-				(decimal_second_count - button_double_press_time[0]) <= double_press_interval) {
-				is_double_press[0] = true;
-				is_holding[0] = false;
-				is_single_press[0] = false;
-			} else {
-				is_single_press[0] = true;
-				is_holding[0] = false
-				is_double_press[0] = false;
-			}
-			button_holding_time[0] = decimal_second_count;
+			check_double_press(&is_first_press[0], &is_double_press[0], &is_holding[0],
+					decimal_second_count, button_double_press_time[0],
+					double_press_interval, &button_holding_time[0]);
 		}
 		/* B1 is released */
 		else {
 			stop_sound(&htim1);
-			if ((decimal_second_count - button_holding_time[0]) >= holding_bound) {
-				is_holding[0] = true;
-				is_double_press[0] = false;
-				is_single_press[0] = false;
-			} else {
-				button_double_press_time[0] = decimal_second_count;
-			}
+			check_holding(&is_holding[0], &is_double_press[0], &is_single_press[0],
+					holding_bound, decimal_second_count, button_holding_time[0],
+					&button_double_press_time[0]);
 		}
 	} else if (GPIO_Pin == SW1_Pin) {
 		/* The sw1 pin is pressed */
@@ -456,27 +445,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (sound_enable) {
 				generate_sound(300,50,&htim1);
 			}
-			if (is_first_press[1] == true && is_double_press[1] == false &&
-				(decimal_second_count - button_double_press_time[1]) <= double_press_interval) {
-				is_double_press[1] = true;
-				is_single_press[1] = false;
-			} else {
-				is_single_press[1] = true;
-				is_double_press[1] = false;
-			}
-			button_holding_time[1] = decimal_second_count;
-
+			check_double_press(&is_first_press[1], &is_double_press[1], &is_holding[1],
+					decimal_second_count, button_double_press_time[1],
+					double_press_interval, &button_holding_time[1]);
 		}
 		/* The sw1 pin is released */
 		else {
 			stop_sound(&htim1);
-			if ((decimal_second_count - button_holding_time[1]) >= holding_bound) {
-				is_holding[1] = true;
-				button_double_press_time[0] = 0;
-				is_single_press[1] = false;
-			} else {
-				button_double_press_time[1] = decimal_second_count;
-			}
+			check_holding(&is_holding[1], &is_double_press[1], &is_single_press[1],
+					holding_bound, decimal_second_count, button_holding_time[1],
+					&button_double_press_time[1]);
 		}
 	} else if (GPIO_Pin == SW2_Pin) {
 		/* The sw2 pin is pressed */
@@ -485,27 +463,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (sound_enable) {
 				generate_sound(300,50,&htim1);
 			}
-			if (is_first_press[2] == true && is_double_press[2] == false &&
-				( decimal_second_count - button_double_press_counting[2]) <= double_press_interval) {
-				is_single_press[2] = false;
-				is_double_press[2] = true;
-			} else {
-				is_single_press[2] = true;
-				is_double_press[2] = false;
-			}
-			/* start counting the holding and double press */
-			button_holding_time[2] = decimal_second_count;
+			check_double_press(&is_first_press[2], &is_double_press[2],&is_holding[2],
+					decimal_second_count, button_double_press_time[2],
+					double_press_interval, &button_holding_time[2]);
 		}
 
 		/* The sw2 pin is released */
 		else {
-			if ((decimal_second_count - button_holding_time[2]) >= holding_bound) {
-				is_holding[2] = true;
-				button_double_press_counting[2] = 0;
-			} else {
-				button_double_press_counting[2] = decimal_second_count;
-			}
-
+			stop_sound(&htim1);
+			check_holding(&is_holding[2], &is_double_press[2], &is_single_press[2],
+					holding_bound, decimal_second_count, button_holding_time[2],
+					&button_double_press_time[2]);
 		}
 	} else {
 		/* The sw3 pin is pressed */
@@ -514,26 +482,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (sound_enable) {
 				generate_sound(300,50,&htim1);
 			}
-			if (is_first_press[3] == true && is_double_press[3] == false &&
-				( decimal_second_count - button_double_press_counting[2]) <= double_press_interval) {
-				is_single_press[3] = false;
-				is_double_press[3] = true;
-			} else {
-				is_single_press[3] = true;
-				is_double_press[3] = false;
-				/* only start counting when first_press is done and reset the double count */
-			}
-			button_holding_time[3] = decimal_second_count;
+			check_double_press(&is_first_press[3], &is_double_press[3], &is_holding[3],
+				decimal_second_count, button_double_press_time[3],
+				double_press_interval, &button_holding_time[3]);
 		}
 		/* The sw3 pin is released */
 		else {
 			stop_sound(&htim1);
-			if ((decimal_second_count - button_holding_time[3]) >= holding_bound) {
-				is_holding[3] = true;
-				button_double_press_counting[3] = 0;
-			} else {
-				button_double_press_counting[3] = decimal_second_count;
-			}
+			check_holding(&is_holding[3], &is_double_press[3], &is_single_press[3],
+				holding_bound, decimal_second_count, button_holding_time[3],
+				&button_double_press_time[3]);
 		}
 	}
 }
