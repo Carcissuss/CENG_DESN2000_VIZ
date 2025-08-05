@@ -27,6 +27,7 @@
 #include "time.h"
 #include "interrupt.h"
 #include "buzzer.h"
+#include "vibration.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,9 +75,10 @@ bool is_double_press[4];
 bool is_holding[4];
 
 /* sound setting */
-bool enable_button_sound = true;
+bool enable_sound = true;
 bool button_sound = false;
 bool enable_vibration = true;
+bool button_vibration = false;
 bool enable_time_update = false;
 
 /* screen navigation */
@@ -123,8 +125,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* B1 is pressed */
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0) {
 			/* sound indication */
-			if (enable_button_sound) {
+			if (enable_sound) {
 				button_sound = true;
+			}
+			if (enable_vibration) {
+				button_vibration = true;
 			}
 			switch (currentScreen) {
 			case HOME:
@@ -150,8 +155,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* The sw1 pin is pressed */
 		if (HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == 1) {
 			/* sound indication */
-			if (enable_button_sound) {
+			if (enable_sound) {
 				button_sound = true;
+			}
+			if (enable_vibration) {
+				button_vibration = true;
 			}
 			switch (currentScreen){
 				case ALARM:
@@ -177,8 +185,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* The sw2 pin is pressed */
 		if (HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == 1) {
 			/* sound indication */
-			if (enable_button_sound) {
+			if (enable_sound) {
 				button_sound = true;
+			}
+			if (enable_vibration) {
+				button_vibration = true;
 			}
 			currentScreen = HOME;
 			check_double_press(2, is_single_press, is_double_press, is_holding,
@@ -201,8 +212,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* The sw3 pin is pressed */
 		if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == 1) {
 			/* sound indication */
-			if (enable_button_sound) {
+			if (enable_sound) {
 				button_sound = true;
+			}
+			if (enable_vibration) {
+				button_vibration = true;
 			}
 			switch (currentScreen) {
 			case TIME:
@@ -290,9 +304,13 @@ int main(void)
 	  } else {
 		  stop_sound(htim1);
 	  }
+	  if (vibration) {
+		  generate_vibration();
+
+	  }
 	  if (currentScreen != previousScreen) {
 	  	LCD_SendCmd(LCD_CLEAR_DISPLAY);
-	  	HAL_Delay(2);
+	  	coast_asm_delay(2);
 
 	  	switch (currentScreen) {
 	  		case HOME:
@@ -634,15 +652,15 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, SRCLK_Pin|Control_RW_Pin|Data_D4_Pin|Data_D5_Pin
-                          |Data_D6_Pin|Data_D7_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, SRCLK_Pin|COILA_Pin|Control_RW_Pin|COILC_Pin
+                          |Data_D4_Pin|Data_D5_Pin|Data_D6_Pin|Data_D7_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LD2_Pin|Control_RS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|COILB_Pin|Control_RS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin|LED_D2B4_Pin
-                          |LED_D3_Pin|RCLK_Latch_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin
+                          |LED_D2B4_Pin|LED_D3_Pin|RCLK_Latch_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Control_E_GPIO_Port, Control_E_Pin, GPIO_PIN_RESET);
@@ -653,10 +671,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SRCLK_Pin Control_RW_Pin Data_D4_Pin Data_D5_Pin
-                           Data_D6_Pin Data_D7_Pin */
-  GPIO_InitStruct.Pin = SRCLK_Pin|Control_RW_Pin|Data_D4_Pin|Data_D5_Pin
-                          |Data_D6_Pin|Data_D7_Pin;
+  /*Configure GPIO pins : SRCLK_Pin COILA_Pin Control_RW_Pin COILC_Pin
+                           Data_D4_Pin Data_D5_Pin Data_D6_Pin Data_D7_Pin */
+  GPIO_InitStruct.Pin = SRCLK_Pin|COILA_Pin|Control_RW_Pin|COILC_Pin
+                          |Data_D4_Pin|Data_D5_Pin|Data_D6_Pin|Data_D7_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -676,8 +694,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin Control_RS_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin|Control_RS_Pin;
+  /*Configure GPIO pins : LD2_Pin COILB_Pin Control_RS_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin|COILB_Pin|Control_RS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -689,10 +707,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SW3_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED_D1_Pin SER_Data_IN_Pin LED_D2_Pin LED_D2B4_Pin
-                           LED_D3_Pin RCLK_Latch_Pin */
-  GPIO_InitStruct.Pin = LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin|LED_D2B4_Pin
-                          |LED_D3_Pin|RCLK_Latch_Pin;
+  /*Configure GPIO pins : COILD_Pin LED_D1_Pin SER_Data_IN_Pin LED_D2_Pin
+                           LED_D2B4_Pin LED_D3_Pin RCLK_Latch_Pin */
+  GPIO_InitStruct.Pin = COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin
+                          |LED_D2B4_Pin|LED_D3_Pin|RCLK_Latch_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
