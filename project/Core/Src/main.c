@@ -142,6 +142,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		}
 		/* B1 is released */
 		else {
+			stop_sound(htim1);
 			check_holding(0,
 						  is_single_press,
 						  is_double_press,
@@ -172,6 +173,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		}
 		/* The sw1 pin is released */
 		else {
+			stop_sound(htim1);
 			check_holding(1,
 						  is_single_press,
 						  is_double_press,
@@ -199,6 +201,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 		/* The sw2 pin is released */
 		else {
+			stop_sound(htim1);
 			check_holding(2,
 						  is_single_press,
 						  is_double_press,
@@ -229,6 +232,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		}
 		/* The sw3 pin is released */
 		else {
+			stop_sound(htim1);
 			check_holding(2,
 						  is_single_press,
 						  is_double_press,
@@ -298,15 +302,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  if (button_sound) {
 		  /* frequency ： duration ：volume : htim1 */
-		  play_note(460, 450, 50, htim1);
-		  play_note(300, 150, 50, htim1);
+		  play_note(460, 150, 50, htim1);
+		  play_note(300, 50, 50, htim1);
 		  button_sound = false;
 	  } else {
 		  stop_sound(htim1);
 	  }
-	  if (vibration) {
+	  if (button_vibration) {
 		  generate_vibration();
-
+		  button_vibration = false;
 	  }
 	  if (currentScreen != previousScreen) {
 	  	LCD_SendCmd(LCD_CLEAR_DISPLAY);
@@ -430,8 +434,8 @@ static void MX_RTC_Init(void)
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = 0x0;
-  sTime.Minutes = 0x0;
+  sTime.Hours = 0x8;
+  sTime.Minutes = 0x30;
   sTime.Seconds = 0x0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -439,10 +443,10 @@ static void MX_RTC_Init(void)
   {
     Error_Handler();
   }
-  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
-  sDate.Month = RTC_MONTH_JANUARY;
-  sDate.Date = 0x1;
-  sDate.Year = 0x0;
+  sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
+  sDate.Month = RTC_MONTH_AUGUST;
+  sDate.Date = 0x3;
+  sDate.Year = 0x25;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
   {

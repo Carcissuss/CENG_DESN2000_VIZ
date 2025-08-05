@@ -21,8 +21,7 @@ void timePage() {
 
 	LCD_SendCmd(LCD_SECOND_LINE);
 
-	LCD_SendStr("ALARM   ");
-	LCD_SendStr("24H TIME");
+	LCD_SendStr("ALARM");
 
 }
 
@@ -47,7 +46,7 @@ void updateTime(uint8_t row, uint8_t col) {
 	sprintf(buff, "%02d:%02d:%02d", hours, minutes, seconds);
 	LCD_SendStr(buff);
 
-	sprintf(dateBuff, " ", day, month, year);
+	sprintf(dateBuff, "", day, month, year);
 	LCD_SendStr(dateBuff);
 }
 

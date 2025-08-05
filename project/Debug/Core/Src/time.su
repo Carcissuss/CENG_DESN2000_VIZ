@@ -1,2 +1,2 @@
 ../Core/Src/time.c:7:6:timePage	64	static
-../Core/Src/time.c:29:6:updateTime	48	static
+../Core/Src/time.c:28:6:updateTime	48	static
