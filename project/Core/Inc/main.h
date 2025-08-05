@@ -64,8 +64,6 @@ void Error_Handler(void);
 #define B1_EXTI_IRQn EXTI15_10_IRQn
 #define SRCLK_Pin GPIO_PIN_0
 #define SRCLK_GPIO_Port GPIOC
-#define PWM_Buzzer_Pin GPIO_PIN_2
-#define PWM_Buzzer_GPIO_Port GPIOC
 #define SW1_Pin GPIO_PIN_1
 #define SW1_GPIO_Port GPIOA
 #define SW1_EXTI_IRQn EXTI1_IRQn

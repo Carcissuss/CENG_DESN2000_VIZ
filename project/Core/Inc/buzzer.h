@@ -11,6 +11,6 @@
 #include "main.h"
 void generate_sound(uint16_t frequency, uint8_t duty_cycle, TIM_HandleTypeDef htim1);
 void stop_sound(TIM_HandleTypeDef htim1);
-void play_note(uint16_t note, uint32_t duration, uint8_t volume);
+void play_note(uint16_t note, uint32_t duration, uint8_t volume, TIM_HandleTypeDef htim1);
 
 #endif /* INC_BUZZER_H_ */
