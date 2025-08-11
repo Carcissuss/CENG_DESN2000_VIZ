@@ -10,5 +10,5 @@
 
 #include "main.h"
 
-
+void generate_vibration(void);
 #endif /* INC_VIBRATION_H_ */

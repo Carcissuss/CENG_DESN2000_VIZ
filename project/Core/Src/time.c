@@ -5,7 +5,7 @@
 #include "lcd.h"
 
 void timePage() {
-
+	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 	char buff[16];
 
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);

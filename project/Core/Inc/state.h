@@ -4,7 +4,12 @@ typedef enum {
 	NONE,
     HOME,
     TIME,
-    ALARM
+    ALARM,
+	FITNESS,
+	FLASHLIGHT,
+	COUNTDOWN,
+	ALARM,
+	STOPWATCH
 } ScreenState;
 
 extern volatile ScreenState currentScreen;
