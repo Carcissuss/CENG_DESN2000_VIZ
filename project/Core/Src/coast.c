@@ -22,5 +22,4 @@ void homePage() {
 	LCD_SendCmd(LCD_SECOND_LINE); // Move to second line
 
 	LCD_SendStr("OPT ");
-
 }
