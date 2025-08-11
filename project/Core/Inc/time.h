@@ -1,5 +1,7 @@
 
 void timePage();
 void alarmPage();
-void timeFormat();
-void timeDateInit();
+void switchTimeFormat();
+void switchAMPM();
+void changeAlarmHour();
+void changeAlarmMin();
