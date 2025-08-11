@@ -21,7 +21,8 @@ void timePage() {
 
 	LCD_SendCmd(LCD_SECOND_LINE);
 
-	LCD_SendStr("ALARM");
+	LCD_SendStr("ALARM   ");
+	LCD_SendStr("24H TIME");
 
 }
 
@@ -34,19 +35,17 @@ void updateTime(uint8_t row, uint8_t col) {
 
 	uint8_t hours = sTime.Hours;
 	uint8_t minutes = sTime.Minutes;
-	uint8_t seconds = sTime.Seconds;
 	uint8_t day = sDate.Date;
 	uint8_t month = sDate.Month;
-	uint8_t year = sDate.Year;
 
 	// Move cursor to desired position (row 0 or 1)
 	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
 	LCD_SendCmd(baseCmd + col);
 
-	sprintf(buff, "%02d:%02d:%02d", hours, minutes, seconds);
+	sprintf(buff, "%02d:%02d", hours, minutes);
 	LCD_SendStr(buff);
 
-	sprintf(dateBuff, "", day, month, year);
+	sprintf(dateBuff, " %02d/%02d", day, month);
 	LCD_SendStr(dateBuff);
 }
 

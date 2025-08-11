@@ -25,9 +25,6 @@
 #include "lcd.h"
 #include "state.h"
 #include "time.h"
-#include "interrupt.h"
-#include "buzzer.h"
-#include "vibration.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,13 +44,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 RTC_HandleTypeDef hrtc;
+uint32_t lastTick = 0;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
-uint32_t last_tick = 0;
 uint32_t seconds = 0;
 uint32_t period_count = 0;
 uint32_t decimal_second_count = 0;
@@ -70,16 +67,13 @@ bool buttonB = false;
 uint32_t double_press_interval = 10;
 uint32_t holding_bound = 15;
 /* press check */
-bool is_single_press[4];
+bool is_first_press[4];
 bool is_double_press[4];
 bool is_holding[4];
 
 /* sound setting */
 bool enable_sound = true;
-bool button_sound = false;
 bool enable_vibration = true;
-bool button_vibration = false;
-bool enable_time_update = false;
 
 /* screen navigation */
 typedef struct {
@@ -110,144 +104,35 @@ static void MX_TIM1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
-extern void coast_asm_delay(uint32_t milliseconds);
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_RTC_Init(void);
-static void system_clock_setup(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin == B1_Pin) {
-		/* B1 is pressed */
-		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0) {
-			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
-			if (enable_vibration) {
-				button_vibration = true;
-			}
-			switch (currentScreen) {
-			case HOME:
+	if (GPIO_Pin == SW2_Pin) {
+		currentScreen = HOME;
+	} else if (GPIO_Pin == SW1_Pin) {
+		switch (currentScreen){
+			case ALARM:
 				currentScreen = TIME;
 				break;
-			}
-			check_double_press(0, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
 		}
-		/* B1 is released */
-		else {
-			stop_sound(htim1);
-			check_holding(0,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
-		}
-	} else if (GPIO_Pin == SW1_Pin) {
-		/* The sw1 pin is pressed */
-		if (HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == 1) {
-			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
-			if (enable_vibration) {
-				button_vibration = true;
-			}
-			switch (currentScreen){
-				case ALARM:
-					currentScreen = TIME;
+	} else if (GPIO_Pin == SW3_Pin) {
+		switch (currentScreen) {
+				case TIME:
+					currentScreen = ALARM;
 					break;
-			}
-			check_double_press(1, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+				}
+	} else if (GPIO_Pin == B1_Pin) {
+		switch (currentScreen) {
+		case HOME:
+			currentScreen = TIME;
+			break;
 		}
-		/* The sw1 pin is released */
-		else {
-			stop_sound(htim1);
-			check_holding(1,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
-		}
-	} else if (GPIO_Pin == SW2_Pin) {
-		/* The sw2 pin is pressed */
-		if (HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == 1) {
-			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
-			if (enable_vibration) {
-				button_vibration = true;
-			}
-			currentScreen = HOME;
-			check_double_press(2, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
-		}
-
-		/* The sw2 pin is released */
-		else {
-			stop_sound(htim1);
-			check_holding(2,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
-		}
-	} else {
-		/* The sw3 pin is pressed */
-		if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == 1) {
-			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
-			if (enable_vibration) {
-				button_vibration = true;
-			}
-			switch (currentScreen) {
-			case TIME:
-				currentScreen = ALARM;
-				break;
-			}
-			check_double_press(3, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
-		}
-		/* The sw3 pin is released */
-		else {
-			stop_sound(htim1);
-			check_holding(2,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
-		}
-	}
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim == &htim6) {
-		seconds++;
 	}
 }
 /* USER CODE END 0 */
@@ -276,7 +161,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  system_clock_setup();
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -300,38 +185,23 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (button_sound) {
-		  /* frequency ： duration ：volume : htim1 */
-		  play_note(460, 150, 50, htim1);
-		  play_note(300, 50, 50, htim1);
-		  button_sound = false;
-	  } else {
-		  stop_sound(htim1);
-	  }
-	  if (button_vibration) {
-		  generate_vibration();
-		  button_vibration = false;
-	  }
 	  if (currentScreen != previousScreen) {
 	  	LCD_SendCmd(LCD_CLEAR_DISPLAY);
-	  	coast_asm_delay(2);
+	  	HAL_Delay(2);
 
 	  	switch (currentScreen) {
 	  		case HOME:
 	  			homePage(); // draw layout only
-	  			updateTime(1, 4);
 	  			break;
 	  		case TIME:
 	  			timePage();
-	  			updateTime(0, 4);
 	  			break;
 	  	}
 	  	previousScreen = currentScreen;
-	  	last_tick = HAL_GetTick();
+	  	lastTick = HAL_GetTick();  // reset update clock
 	  }
-	    HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, 1);
-	  /* UPDATE TIME EVERY SECOND ELAPSED */
-	  if ((HAL_GetTick() - last_tick) >= 1000) {
+
+	  if (HAL_GetTick() - lastTick >= 1000) {
 	  	switch (currentScreen) {
 	  		case HOME:
 	  			updateTime(1, 4);  // row 1 (second line), column 4
@@ -340,7 +210,7 @@ int main(void)
 	  			updateTime(0, 4);  // row 0, col 6 (or wherever)
 	  			break;
 	  	}
-	  	last_tick += 1000;
+	  	lastTick = HAL_GetTick();
 	  }
   }
   /* USER CODE END 3 */
@@ -359,14 +229,16 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
+
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -386,7 +258,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_TIM1;
-  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
@@ -434,8 +306,8 @@ static void MX_RTC_Init(void)
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = 0x8;
-  sTime.Minutes = 0x30;
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
   sTime.Seconds = 0x0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -443,10 +315,10 @@ static void MX_RTC_Init(void)
   {
     Error_Handler();
   }
-  sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
-  sDate.Month = RTC_MONTH_AUGUST;
-  sDate.Date = 0x3;
-  sDate.Year = 0x25;
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
   {
@@ -457,7 +329,7 @@ static void MX_RTC_Init(void)
   */
   sAlarm.AlarmTime.Hours = 0x0;
   sAlarm.AlarmTime.Minutes = 0x0;
-  sAlarm.AlarmTime.Seconds = 0x0;
+  sAlarm.AlarmTime.Seconds = 0x1;
   sAlarm.AlarmTime.SubSeconds = 0x0;
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -466,12 +338,13 @@ static void MX_RTC_Init(void)
   sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
   sAlarm.AlarmDateWeekDay = 0x1;
   sAlarm.Alarm = RTC_ALARM_A;
-  if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-
+  sTime.Hours = 0x9;
+  sTime.Minutes = 0x45;
   /* USER CODE END RTC_Init 2 */
 
 }
@@ -488,7 +361,6 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 0 */
 
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
@@ -497,21 +369,12 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 1000 -1;
+  htim1.Init.Prescaler = 999;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 296;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
@@ -524,17 +387,13 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 198;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -656,15 +515,15 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, SRCLK_Pin|COILA_Pin|Control_RW_Pin|COILC_Pin
-                          |Data_D4_Pin|Data_D5_Pin|Data_D6_Pin|Data_D7_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, SRCLK_Pin|PWM_Buzzer_Pin|Control_RW_Pin|Data_D4_Pin
+                          |Data_D5_Pin|Data_D6_Pin|Data_D7_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LD2_Pin|COILB_Pin|Control_RS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|Control_RS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin
-                          |LED_D2B4_Pin|LED_D3_Pin|RCLK_Latch_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin|LED_D2B4_Pin
+                          |LED_D3_Pin|RCLK_Latch_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Control_E_GPIO_Port, Control_E_Pin, GPIO_PIN_RESET);
@@ -675,10 +534,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SRCLK_Pin COILA_Pin Control_RW_Pin COILC_Pin
-                           Data_D4_Pin Data_D5_Pin Data_D6_Pin Data_D7_Pin */
-  GPIO_InitStruct.Pin = SRCLK_Pin|COILA_Pin|Control_RW_Pin|COILC_Pin
-                          |Data_D4_Pin|Data_D5_Pin|Data_D6_Pin|Data_D7_Pin;
+  /*Configure GPIO pins : SRCLK_Pin PWM_Buzzer_Pin Control_RW_Pin Data_D4_Pin
+                           Data_D5_Pin Data_D6_Pin Data_D7_Pin */
+  GPIO_InitStruct.Pin = SRCLK_Pin|PWM_Buzzer_Pin|Control_RW_Pin|Data_D4_Pin
+                          |Data_D5_Pin|Data_D6_Pin|Data_D7_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -698,8 +557,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin COILB_Pin Control_RS_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin|COILB_Pin|Control_RS_Pin;
+  /*Configure GPIO pins : LD2_Pin Control_RS_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin|Control_RS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -711,10 +570,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SW3_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : COILD_Pin LED_D1_Pin SER_Data_IN_Pin LED_D2_Pin
-                           LED_D2B4_Pin LED_D3_Pin RCLK_Latch_Pin */
-  GPIO_InitStruct.Pin = COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin
-                          |LED_D2B4_Pin|LED_D3_Pin|RCLK_Latch_Pin;
+  /*Configure GPIO pins : LED_D1_Pin SER_Data_IN_Pin LED_D2_Pin LED_D2B4_Pin
+                           LED_D3_Pin RCLK_Latch_Pin */
+  GPIO_InitStruct.Pin = LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin|LED_D2B4_Pin
+                          |LED_D3_Pin|RCLK_Latch_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -746,45 +605,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void system_clock_setup() {
-	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-	RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-	RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
-	RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-	{
-	Error_Handler();
-	}
 
-	/** Initializes the CPU, AHB and APB buses clocks
-	*/
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-							  |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-	{
-	Error_Handler();
-	}
-	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_TIM1;
-	PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-	PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
-	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-	{
-	Error_Handler();
-	}
-}
 /* USER CODE END 4 */
 
 /**
