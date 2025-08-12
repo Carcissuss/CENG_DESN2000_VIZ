@@ -1,2 +1,7 @@
-../Core/Src/time.c:7:6:timePage	1
-../Core/Src/time.c:28:6:updateTime	2
+../Core/Src/time.c:11:6:timePage	2
+../Core/Src/time.c:39:6:updateTime	5
+../Core/Src/time.c:72:6:alarmPage	2
+../Core/Src/time.c:91:6:switchTimeFormat	1
+../Core/Src/time.c:97:6:switchAMPM	3
+../Core/Src/time.c:111:6:changeAlarmHour	5
+../Core/Src/time.c:127:6:changeAlarmMin	2

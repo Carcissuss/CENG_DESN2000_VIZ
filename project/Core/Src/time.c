@@ -4,6 +4,10 @@
 #include "coast.h"
 #include "lcd.h"
 
+RTC_TimeTypeDef sAlarm;
+bool is_24_hour_format = true;
+extern bool timeFormatChanged;
+
 void timePage() {
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 	char buff[16];
@@ -11,8 +15,8 @@ void timePage() {
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-	char *weekDayMap [7] = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
-	char *weekday = weekDayMap[sDate.WeekDay];
+	char *weekDayMap[7] = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
+	char *weekday = weekDayMap[sDate.WeekDay - 1];
 
 	//uint8_t year = sDate.Year;
 	sprintf(buff, "%s ", weekday);
@@ -22,6 +26,13 @@ void timePage() {
 	LCD_SendCmd(LCD_SECOND_LINE);
 
 	LCD_SendStr("ALARM");
+
+
+	if (is_24_hour_format) {
+	    LCD_SendStr("   24H_TIME");
+	} else {
+	    LCD_SendStr("   12H_TIME");
+	}
 
 }
 
@@ -34,24 +45,30 @@ void updateTime(uint8_t row, uint8_t col) {
 
 	uint8_t hours = sTime.Hours;
 	uint8_t minutes = sTime.Minutes;
-	uint8_t seconds = sTime.Seconds;
 	uint8_t day = sDate.Date;
 	uint8_t month = sDate.Month;
-	uint8_t year = sDate.Year;
 
+	uint8_t displayHour = hours;
+	 if (!is_24_hour_format) {
+	        if (hours == 0) {
+	        	displayHour = 12;
+	        }
+	        else if (hours > 12) {
+	        	displayHour = hours - 12;
+	        }
+	    }
 	// Move cursor to desired position (row 0 or 1)
 	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
 	LCD_SendCmd(baseCmd + col);
 
-	sprintf(buff, "%02d:%02d:%02d", hours, minutes, seconds);
+	sprintf(buff, "%02d:%02d ", hours, minutes);
 	LCD_SendStr(buff);
 
-	sprintf(dateBuff, "", day, month, year);
+	sprintf(dateBuff, " %02d/%02d", day, month);
 	LCD_SendStr(dateBuff);
 }
 
 
-/*
 void alarmPage() {
 	char buff[16];
 
@@ -59,58 +76,58 @@ void alarmPage() {
 
 	LCD_SendCmd(LCD_SECOND_LINE);
 
+	uint8_t hours =  sAlarm.Hours;
+	uint8_t minutes = sAlarm.Minutes;
 
-	LCD_SendStr("%02d:%02d ");
+	sprintf(buff, "%02d:%02d A.M", hours, minutes);
+	LCD_SendStr(buff);
 
-	if (!(hrtc.Init.HourFormat == RTC_HOURFORMAT_24)) {
-		if (hrtc.Init.HourFormat == RTC_HOURFORMAT12_AM) {
+	if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
 
+void switchTimeFormat() {
+    is_24_hour_format = !is_24_hour_format;
+    timeFormatChanged = true;
+}
+
+
+void switchAMPM(){
+	sAlarm.Hours += 12;
+	char buff[16];
+	uint8_t baseCmd = (2) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
+	LCD_SendCmd(baseCmd + 6);
+	if (sAlarm.TimeFormat == RTC_HOURFORMAT12_AM) {
+		sprintf(buff, "A");
+		LCD_SendStr(buff);
+	} else if (sAlarm.TimeFormat == RTC_HOURFORMAT12_PM) {
+		sprintf(buff, "P");
+		LCD_SendStr(buff);
+	}
+}
+
+void changeAlarmHour() {
+	if (sTime.TimeFormat == RTC_HOURFORMAT_12) {
+		if (sAlarm.Hours <= 12) {
+			sAlarm.Hours += 1;
+		} else {
+			sAlarm.Hours = 1;
+		}
+	} else if (sTime.TimeFormat == RTC_HOURFORMAT_24) {
+		if (sAlarm.Hours <= 23) {
+			sAlarm.Hours += 1;
+		} else {
+			sAlarm.Hours = 0;
 		}
 	}
-}*/
-/*rmat() {
-	if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1) {
-		switch (hrtc.Init.HourFormat) {
-			case RTC_HOURFORMAT12:
-				hrtc.Init.HourFormat = RTC_HOURFORMAT24;
-			case RTC_HOURFORMAT24:
-				hrtc.Init.HourFormat = RTC_HOURFORMAT12;
-		}
+}
+
+void changeAlarmMin() {
+	if (sAlarm.Minutes < 60) {
+		sAlarm.Minutes += 5;
+	} else {
+		sAlarm.Minutes = 0;
 	}
-}*/
-/*
-void timeDateInit() {
-	  RTC_TimeTypeDef sTime = {0};
-	  RTC_DateTypeDef sDate = {0};
-
-	  hrtc.Instance = RTC;
-	    hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-	    hrtc.Init.AsynchPrediv = 127;
-	    hrtc.Init.SynchPrediv = 255;
-	    hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
-	    hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-	    hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-	    if (HAL_RTC_Init(&hrtc) != HAL_OK)
-	    {
-	      Error_Handler();
-	    }
-
-      sTime.Hours = 0x9;
-	  sTime.Minutes = 0x45;
-	  sTime.Seconds = 0;
-	  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-	  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-	  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
-	  {
-	     Error_Handler();
-	  }
-
-	  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
-	  sDate.Month = RTC_MONTH_AUGUST;
-	  sDate.Date = 0x4;
-	  sDate.Year = 0x25;
-
-	  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
-	     Error_Handler();
-	  }
-}*/
+}

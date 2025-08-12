@@ -57,8 +57,8 @@ uint32_t last_tick = 0;
 uint32_t seconds = 0;
 uint32_t period_count = 0;
 uint32_t decimal_second_count = 0;
-uint32_t button_double_press_time[4];
-uint32_t button_holding_time[4];
+uint32_t button_double_press_time[4] = {0, 0, 0, 0};
+uint32_t button_holding_time[4] = {0, 0, 0, 0};
 
 bool timeFormatChanged = false;
 
@@ -70,11 +70,11 @@ bool buttonB = false;
 
 /* double press interval and holding time */
 uint32_t double_press_interval = 10;
-uint32_t holding_bound = 15;
+uint32_t holding_bound = 50;
 /* press check */
-bool is_single_press[4];
-bool is_double_press[4];
-bool is_holding[4];
+bool is_single_press[4] = {false, false, false, false};
+bool is_double_press[4] = {false, false, false, false};
+bool is_holding[4] = {false, false, false, false};
 
 /* sound setting */
 bool enable_sound = true;
@@ -155,7 +155,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						  holding_bound,
 						  button_double_press_time,
 						  button_holding_time);
-			if (is_holding[4]) {
+			if (is_holding[0]) {
 				switch (currentScreen) {
 					case TIME:
 						switchTimeFormat();
@@ -188,7 +188,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						  holding_bound,
 						  button_double_press_time,
 						  button_holding_time);
-			if (is_holding) {
+			if (is_holding[1]) {
 				switch (currentScreen){
 				//SW1 held, BACK for ALARM
 					case ALARM:
@@ -208,23 +208,44 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				button_vibration = true;
 			}
 			currentScreen = HOME;
-			check_double_press(2, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+//			check_double_press(2, is_single_press, is_double_press, is_holding,
+//					decimal_second_count, double_press_interval,
+//					button_double_press_time, button_holding_time);
+		    if (is_single_press[2] == true &&
+		        is_double_press[2] == false &&
+		        (decimal_second_count - button_double_press_time[2]) <= double_press_interval) {
+		        is_double_press[2] = true;
+		        is_single_press[2] = false;
+		        is_holding[2] = false;
+
+		    } else {
+		        is_single_press[2] = true;
+		        is_double_press[2] = false;
+		        is_holding[2] = false;
+		    }
+
+		    button_holding_time[2] = decimal_second_count;
 		}
 
 		/* The sw2 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(2,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
-			if (is_holding) {
+//			check_holding(2,
+//						  is_single_press,
+//						  is_double_press,
+//						  is_holding,
+//						  decimal_second_count,
+//						  holding_bound,
+//						  button_double_press_time,
+//						  button_holding_time);
+			if ((decimal_second_count - button_holding_time[2]) >= holding_bound) {
+				is_holding[2] = true;
+				is_double_press[2] = false;
+				is_single_press[2] = false;
+			} else {
+				button_double_press_time[2] = decimal_second_count;
+			}
+			if (is_holding[2] == true) {
 				switch (currentScreen){
 				//SW2 Held, HOME
 					case TIME:
@@ -246,6 +267,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_vibration) {
 				button_vibration = true;
 			}
+			if (is_double_press[2]) {
+				switch (currentScreen){
+				case ALARM:
+					switchAMPM();
+					break;
+				}
+			}
 			switch (currentScreen) {
 				case TIME:
 					currentScreen = ALARM;
@@ -256,18 +284,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			check_double_press(3, is_single_press, is_double_press, is_holding,
 					decimal_second_count, double_press_interval,
 					button_double_press_time, button_holding_time);
-			if (is_double_press) {
-				switch (currentScreen){
-				case ALARM:
-					switchAMPM();
-					break;
-				}
-			}
+
 		}
 		/* The sw3 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(2,
+			check_holding(3,
 						  is_single_press,
 						  is_double_press,
 						  is_holding,
@@ -282,6 +304,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim6) {
 		seconds++;
+	} else if (htim == &htim7) {
+		period_count++;
+		if (period_count >= 100) {
+			period_count = 0;
+			decimal_second_count++;
+		}
 	}
 }
 /* USER CODE END 0 */
@@ -376,6 +404,8 @@ int main(void)
 	  			break;
 	  		case TIME:
 	  			updateTime(0, 4);  // row 0, col 6 (or wherever)
+	  			break;
+	  		default:
 	  			break;
 	  	}
 	  	last_tick += 1000;
