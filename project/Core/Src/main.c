@@ -69,8 +69,8 @@ bool button3 = false;
 bool buttonB = false;
 
 /* double press interval and holding time */
-uint32_t double_press_interval = 10;
-uint32_t holding_bound = 50;
+uint32_t double_press_interval = 5;
+uint32_t holding_bound = 10;
 /* press check */
 bool is_single_press[4] = {false, false, false, false};
 bool is_double_press[4] = {false, false, false, false};
@@ -139,27 +139,50 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 					break;
 				case ALARM:
 					changeAlarmMin();
+				default:
 			}
-			check_double_press(0, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+//			check_double_press(0, is_single_press, is_double_press, is_holding,
+//					decimal_second_count, double_press_interval,
+//					button_double_press_time, button_holding_time);
+			if (is_single_press[0] == true &&
+				is_double_press[0] == false &&
+				(decimal_second_count - button_double_press_time[0]) <= double_press_interval) {
+				is_double_press[0] = true;
+				is_single_press[0] = false;
+				is_holding[0] = false;
+
+			} else {
+				is_single_press[0] = true;
+				is_double_press[0] = false;
+				is_holding[0] = false;
+			}
+
+			button_holding_time[0] = decimal_second_count;
 		}
 		/* B1 is released */
 		else {
 			stop_sound(htim1);
-			check_holding(0,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+//			check_holding(0,
+//						  is_single_press,
+//						  is_double_press,
+//						  is_holding,
+//						  decimal_second_count,
+//						  holding_bound,
+//						  button_double_press_time,
+//						  button_holding_time);
+			if ((decimal_second_count - button_holding_time[0]) >= holding_bound) {
+				is_holding[0] = true;
+				is_double_press[0] = false;
+				is_single_press[0] = false;
+			} else {
+				button_double_press_time[0] = decimal_second_count;
+			}
 			if (is_holding[0]) {
 				switch (currentScreen) {
 					case TIME:
 						switchTimeFormat();
 						break;
+					default:
 					}
 			}
 		}
@@ -173,21 +196,44 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_vibration) {
 				button_vibration = true;
 			}
-			check_double_press(1, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+//			check_double_press(1, is_single_press, is_double_press, is_holding,
+//					decimal_second_count, double_press_interval,
+//					button_double_press_time, button_holding_time);
+			if (is_single_press[1] == true &&
+				is_double_press[1] == false &&
+				(decimal_second_count - button_double_press_time[1]) <= double_press_interval) {
+				is_double_press[1] = true;
+				is_single_press[1] = false;
+				is_holding[1] = false;
+
+			} else {
+				is_single_press[1] = true;
+				is_double_press[1] = false;
+				is_holding[1] = false;
+			}
+
+			button_holding_time[1] = decimal_second_count;
 		}
 		/* The sw1 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(1,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+//			check_holding(1,
+//						  is_single_press,
+//						  is_double_press,
+//						  is_holding,
+//						  decimal_second_count,
+//						  holding_bound,
+//						  button_double_press_time,
+//						  button_holding_time);
+			/*  check holding time */
+			if ((decimal_second_count - button_holding_time[1]) >= holding_bound) {
+				is_holding[1] = true;
+				is_double_press[1] = false;
+				is_single_press[1] = false;
+			} else {
+				button_double_press_time[1] = decimal_second_count;
+			}
+			/* navigation */
 			if (is_holding[1]) {
 				switch (currentScreen){
 				//SW1 held, BACK for ALARM
@@ -204,10 +250,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_sound) {
 				button_sound = true;
 			}
+			if (button_sound) {
+			  /* frequency ： duration ：volume : htim1 */
+			  play_note(460, 150, 50, htim1);
+			  play_note(300, 50, 50, htim1);
+			  button_sound = false;
+			}
 			if (enable_vibration) {
 				button_vibration = true;
 			}
-			currentScreen = HOME;
+//			currentScreen = HOME;
 //			check_double_press(2, is_single_press, is_double_press, is_holding,
 //					decimal_second_count, double_press_interval,
 //					button_double_press_time, button_holding_time);
@@ -256,6 +308,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						break;
 				}
 			}
+
 		}
 	} else {
 		/* The sw3 pin is pressed */
@@ -281,22 +334,42 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				case ALARM:
 					changeAlarmHour();
 			}
-			check_double_press(3, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+//			check_double_press(3, is_single_press, is_double_press, is_holding,
+//					decimal_second_count, double_press_interval,
+//					button_double_press_time, button_holding_time);
+			if (is_single_press[3] == true &&
+				is_double_press[3] == false &&
+				(decimal_second_count - button_double_press_time[3]) <= double_press_interval) {
+				is_double_press[3] = true;
+				is_single_press[3] = false;
+				is_holding[3] = false;
 
+			} else {
+				is_single_press[3] = true;
+				is_double_press[3] = false;
+				is_holding[3] = false;
+			}
+
+			button_holding_time[3] = decimal_second_count;
 		}
 		/* The sw3 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(3,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+//			check_holding(3,
+//						  is_single_press,
+//						  is_double_press,
+//						  is_holding,
+//						  decimal_second_count,
+//						  holding_bound,
+//						  button_double_press_time,
+//						  button_holding_time);
+			if ((decimal_second_count - button_holding_time[3]) >= holding_bound) {
+				is_holding[3] = true;
+				is_double_press[3] = false;
+				is_single_press[3] = false;
+			} else {
+				button_double_press_time[3] = decimal_second_count;
+			}
 		}
 	}
 }
@@ -362,14 +435,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (button_sound) {
-		  /* frequency ： duration ：volume : htim1 */
-		  play_note(460, 150, 50, htim1);
-		  play_note(300, 50, 50, htim1);
-		  button_sound = false;
-	  } else {
-		  stop_sound(htim1);
-	  }
+//	  if (button_sound) {
+//		  /* frequency ： duration ：volume : htim1 */
+//		  play_note(460, 150, 50, htim1);
+//		  play_note(300, 50, 50, htim1);
+//		  button_sound = false;
+//	  } else {
+//		  stop_sound(htim1);
+//	  }
 	  if (button_vibration) {
 		  generate_vibration();
 		  button_vibration = false;
