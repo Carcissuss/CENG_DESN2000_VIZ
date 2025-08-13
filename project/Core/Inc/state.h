@@ -8,7 +8,8 @@ typedef enum {
 	FITNESS,
 	FLASHLIGHT,
 	COUNTDOWN,
-	STOPWATCH
+	STOPWATCH,
+	ALARM_SET
 } ScreenState;
 
 extern volatile ScreenState currentScreen;

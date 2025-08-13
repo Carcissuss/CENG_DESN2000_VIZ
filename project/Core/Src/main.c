@@ -28,7 +28,7 @@
 #include "interrupt.h"
 #include "buzzer.h"
 #include "vibration.h"
-#include "globals.h"
+//#include "globals.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,7 +55,8 @@ TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
 uint32_t last_tick = 0;
-uint32_t seconds = 0;
+uint32_t second = 0;
+uint32_t lastSecond = 0;
 uint32_t period_count = 0;
 uint32_t decimal_second_count = 0;
 uint32_t button_double_press_time[4] = {0, 0, 0, 0};
@@ -84,25 +85,22 @@ bool enable_vibration = true;
 bool button_vibration = false;
 bool enable_time_update = false;
 
-/* screen navigation */
-typedef struct {
-	bool screen_homepage;
-	bool sceen_countdown;
-	bool screen_stopwatch;
-	bool screen_alarm;
-	bool screen_setting_1;
-	bool screen_setting_2;
-}Navigation;
-
-Navigation screen = {
-    .screen_homepage = true,
-    .sceen_countdown = false,
-    .screen_stopwatch = false,
-    .screen_alarm = false,
-    .screen_setting_1 = false,
-    .screen_setting_2 = false
+/* countdown */
+Countdown countdown = {
+	.minute = 0,
+	.second = 0,
+	.countdown_enable = false
+};
+/* stopwatch */
+Stopwatch stopwatch = {
+	.hour = 0,
+	.minute = 0,
+	.second = 0,
+	.stopwatch_enable = false
 };
 
+/* bool lap stopwatch */
+bool lapStopwatchFlag = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -134,15 +132,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_vibration) {
 				button_vibration = true;
 			}
-			switch (currentScreen) {
-				case HOME:
-					currentScreen = TIME;
-					break;
-				case ALARM:
-					changeAlarmMin();
-					break;
-				default:
-			}
 //			check_double_press(0, is_single_press, is_double_press, is_holding,
 //					decimal_second_count, double_press_interval,
 //					button_double_press_time, button_holding_time);
@@ -160,6 +149,23 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			}
 
 			button_holding_time[0] = decimal_second_count;
+			if (is_single_press[0]) {
+				switch (currentScreen) {
+					case HOME:
+						currentScreen = TIME;
+						break;
+					case ALARM:
+						changeAlarmMin();
+						break;
+					case COUNTDOWN:
+						toggleCountdown(&countdown);
+						break;
+					case STOPWATCH:
+						toggleStopwatch(&stopwatch);
+						break;
+					default:
+				}
+			}
 		}
 		/* B1 is released */
 		else {
@@ -226,19 +232,27 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (is_holding[1]) {
 				switch (currentScreen){
 				//SW1 held, BACK for ALARM
-
+				case TIME:
+				currentScreen = STOPWATCH;
+				break;
 				}
 			} else if (is_single_press[1]) {
 				switch (currentScreen) {
-					case TIME:
-						currentScreen = HOME;
-						break;
-					case ALARM:
-						currentScreen = TIME;
-						break;
-					case ALARM_SET:
-						currentScreen = ALARM;
-						break;
+				case TIME:
+					currentScreen = HOME;
+					break;
+				case ALARM:
+					currentScreen = TIME;
+					break;
+				case ALARM_SET:
+					currentScreen = ALARM;
+					break;
+				case COUNTDOWN:
+					currentScreen = TIME;
+					break;
+				case STOPWATCH:
+					currentScreen = TIME;
+					break;
 				}
 			}
 		}
@@ -250,20 +264,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_sound) {
 				button_sound = true;
 			}
-			if (button_sound) {
-			  /* frequency ： duration ：volume : htim1 */
-			  play_note(460, 150, 50, htim1);
-			  play_note(300, 50, 50, htim1);
-			  button_sound = false;
-			}
 			if (enable_vibration) {
 				button_vibration = true;
 			}
 
-//			currentScreen = HOME;
-//			check_double_press(2, is_single_press, is_double_press, is_holding,
-//					decimal_second_count, double_press_interval,
-//					button_double_press_time, button_holding_time);
 		    if (is_single_press[2] == true &&
 		        is_double_press[2] == false &&
 		        (decimal_second_count - button_double_press_time[2]) <= double_press_interval) {
@@ -293,22 +297,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (is_holding[2] == true) {
 				switch (currentScreen){
 				//SW2 Held, HOME
-					case TIME:
-						currentScreen = HOME;
-						break;
-					case ALARM:
-						currentScreen = HOME;
-						break;
-					case ALARM_SET:
-						currentScreen = HOME;
-						break;
+				default:
+					currentScreen = HOME;
+					break;
 				}
 			} else if (is_single_press[2]) {
 				switch (currentScreen) {
-					case ALARM:
-						currentScreen = ALARM_SET;  // request alarm set
-						break;
-				    }
+				case ALARM:
+					currentScreen = ALARM_SET;  // request alarm set
+					break;
+				case TIME:
+					currentScreen = COUNTDOWN;
+					break;
+				case COUNTDOWN:
+					mintueCountdown(&countdown);
+					break;
+				case STOPWATCH:
+					lapStopwatchFlag = true;
+					break;
+				}
 			}
 		}
 	} else {
@@ -349,7 +356,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			} else {
 				button_double_press_time[3] = decimal_second_count;
 			}
-
+			if (is_holding[3]) {
+				switch(currentScreen) {
+				case COUNTDOWN:
+					resetCountdown(&countdown);
+					break;
+				case STOPWATCH:
+					resetStopwatch(&stopwatch);
+					break;
+				}
+			}
 			if (is_double_press[3]) {
 				is_single_press[3] = false; // cancel single press
 				switch (currentScreen){
@@ -367,6 +383,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 					case ALARM:
 						changeAlarmHour();
 						break;
+					case COUNTDOWN:
+						secondCountdown(&countdown);
+						break;
 				}
 			}
 
@@ -376,7 +395,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim6) {
-		seconds++;
+		second++;
 	} else if (htim == &htim7) {
 		period_count++;
 		if (period_count >= 100) {
@@ -389,15 +408,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
     // Trigger your sound and vibration here
 
-	if (enable_sound) {
-		button_sound = true;
-	}
-	if (button_sound) {
-	  /* frequency ： duration ：volume : htim1 */
-	  play_note(460, 150, 50, htim1);
-	  play_note(300, 50, 50, htim1);
-	  button_sound = false;
-	}
+	/* frequency ： duration ：volume : htim1 */
+	play_note(460, 150, 50, htim1);
+	play_note(300, 50, 50, htim1);
+
 	if (enable_vibration) {
 		button_vibration = true;
 	}
@@ -455,21 +469,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//	  if (button_sound) {
-//		  /* frequency ： duration ：volume : htim1 */
-//		  play_note(460, 150, 50, htim1);
-//		  play_note(300, 50, 50, htim1);
-//		  button_sound = false;
-//	  } else {
-//		  stop_sound(htim1);
-//	  }
+
+	  runCountdown(&countdown, &lastSecond, second, htim1, enable_sound);
+	  runStopwatch(&stopwatch, &lastSecond, second);
+	  if (button_sound) {
+		  /* frequency ： duration ：volume : htim1 */
+		  play_note(460, 150, 50, htim1);
+		  play_note(300, 50, 50, htim1);
+		  button_sound = false;
+	  } else {
+		  stop_sound(htim1);
+	  }
 	  if (button_vibration) {
 		  generate_vibration();
 		  button_vibration = false;
 	  }
 	  if (currentScreen != previousScreen || timeFormatChanged) {
 			LCD_SendCmd(LCD_CLEAR_DISPLAY);
-			coast_asm_delay(2);
+//			coast_asm_delay(2);
 
 			switch (currentScreen) {
 				case HOME:
@@ -487,7 +504,12 @@ int main(void)
 				case ALARM_SET:
 				    alarmConfirm();
 				    break;
-
+				case COUNTDOWN:
+					countdownPage(countdown);
+					break;
+				case STOPWATCH:
+					stopwatchPage(stopwatch);
+					break;
 			}
 			previousScreen = currentScreen;
 			timeFormatChanged = false;  // ✅ clear the flag
@@ -507,6 +529,18 @@ int main(void)
 	  		case ALARM:
 	  			updateAlarm(1, 0);
 	  			break;
+	  		case COUNTDOWN:
+	  			updateCountdown(countdown);
+	  			break;
+	  		case STOPWATCH:
+	  			if (lapStopwatchFlag) {
+	  				lapStopwatch(stopwatch);
+	  				lapStopwatchFlag = false;
+	  			}
+		  		updateStopwatch(stopwatch);
+
+
+				break;
 	  		default:
 	  			break;
 	  	}
@@ -614,7 +648,7 @@ static void MX_RTC_Init(void)
   {
     Error_Handler();
   }
-  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
   sDate.Month = RTC_MONTH_AUGUST;
   sDate.Date = 0x3;
   sDate.Year = 0x25;
@@ -632,18 +666,18 @@ static void MX_RTC_Init(void)
   sAlarm.AlarmTime.SubSeconds = 0x0;
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  sAlarm.AlarmMask = RTC_ALARMMASK_DATEWEEKDAY;
+  sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
   sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
   sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
   sAlarm.AlarmDateWeekDay = 0x1;
   sAlarm.Alarm = RTC_ALARM_A;
-  if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-  //HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
-  //HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
+  HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
 
   /* USER CODE END RTC_Init 2 */
 

@@ -29,7 +29,8 @@ Core/Src/time.o: ../Core/Src/time.c ../Core/Inc/main.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_rtc_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h \
- ../Core/Inc/coast.h ../Core/Inc/main.h ../Core/Inc/lcd.h
+ ../Core/Inc/coast.h ../Core/Inc/main.h ../Core/Inc/lcd.h \
+ ../Core/Inc/buzzer.h ../Core/Inc/time.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
 ../Core/Inc/stm32f3xx_hal_conf.h:
@@ -64,3 +65,5 @@ Core/Src/time.o: ../Core/Src/time.c ../Core/Inc/main.h \
 ../Core/Inc/coast.h:
 ../Core/Inc/main.h:
 ../Core/Inc/lcd.h:
+../Core/Inc/buzzer.h:
+../Core/Inc/time.h:
