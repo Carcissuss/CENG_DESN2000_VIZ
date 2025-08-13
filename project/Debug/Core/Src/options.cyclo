@@ -1,0 +1,5 @@
+../Core/Src/options.c:17:6:settingsPage	4
+../Core/Src/options.c:40:13:switchLedBar	2
+../Core/Src/options.c:51:6:flash_on	1
+../Core/Src/options.c:63:6:flash_off	1
+../Core/Src/options.c:75:6:flash_state	2

@@ -1,0 +1,6 @@
+../Core/Src/lcd.c:5:6:coast_lcd_init	8	static
+../Core/Src/lcd.c:41:6:LCD_Pulse	8	static
+../Core/Src/lcd.c:48:6:LCD_PutNibble	24	static
+../Core/Src/lcd.c:59:6:LCD_SendCmd	16	static
+../Core/Src/lcd.c:67:6:LCD_SendData	16	static
+../Core/Src/lcd.c:76:6:LCD_SendStr	24	static

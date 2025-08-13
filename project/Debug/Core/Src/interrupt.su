@@ -1,0 +1,2 @@
+../Core/Src/interrupt.c:8:6:check_double_press	24	static
+../Core/Src/interrupt.c:33:6:check_holding	24	static

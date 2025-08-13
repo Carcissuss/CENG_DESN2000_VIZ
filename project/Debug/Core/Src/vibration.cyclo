@@ -1,0 +1,4 @@
+../Core/Src/vibration.c:19:20:write_phase	5
+../Core/Src/vibration.c:50:6:vibration_call	2
+../Core/Src/vibration.c:58:6:vibration_stop	1
+../Core/Src/vibration.c:67:6:vibration_tick_1ms	4

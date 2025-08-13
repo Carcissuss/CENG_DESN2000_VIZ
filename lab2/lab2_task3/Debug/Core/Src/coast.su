@@ -1,0 +1,4 @@
+../Core/Src/coast.c:6:6:coast_gpio_keypad_init	32	static
+../Core/Src/coast.c:32:6:coast_gpio_lcd_init	32	static
+../Core/Src/coast.c:70:6:coast_gpio_init	16	static
+../Core/Src/coast.c:78:6:coast_loop_body	16	static
