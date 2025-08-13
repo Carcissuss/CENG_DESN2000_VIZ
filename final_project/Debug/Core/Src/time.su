@@ -1,0 +1,6 @@
+../Core/Src/time.c:21:7:setLabTimer	24	static
+../Core/Src/time.c:30:6:showLabTimer	136	static
+../Core/Src/time.c:55:6:labTimersToStr	88	static
+../Core/Src/time.c:63:6:strToLabTimers	40	static
+../Core/Src/time.c:81:7:updateLabTimer	40	static
+../Core/Src/time.c:124:6:isFinishedLabTimer	8	static

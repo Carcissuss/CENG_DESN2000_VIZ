@@ -1,0 +1,6 @@
+../Core/Src/cloack.c:24:6:standardClock	120	static
+../Core/Src/cloack.c:36:6:standardTimerShow	56	static
+../Core/Src/cloack.c:49:7:userSetAlarm	64	static
+../Core/Src/cloack.c:91:7:countDownUpdate	88	static
+../Core/Src/cloack.c:146:7:stopwatchUpdate	16	static
+../Core/Src/cloack.c:169:13:setAlarmTimeNum	32	static
