@@ -1,7 +1,9 @@
-../Core/Src/time.c:11:6:timePage	64	static
-../Core/Src/time.c:39:6:updateTime	40	static
-../Core/Src/time.c:72:6:alarmPage	32	static
-../Core/Src/time.c:91:6:switchTimeFormat	4	static
-../Core/Src/time.c:97:6:switchAMPM	32	static
-../Core/Src/time.c:111:6:changeAlarmHour	4	static
-../Core/Src/time.c:127:6:changeAlarmMin	4	static
+../Core/Src/time.c:13:6:timePage	64	static
+../Core/Src/time.c:41:6:updateTime	40	static
+../Core/Src/time.c:74:6:alarmPage	32	static
+../Core/Src/time.c:93:6:switchTimeFormat	4	static
+../Core/Src/time.c:100:6:switchAMPM	16	static
+../Core/Src/time.c:111:6:changeAlarmHour	16	static
+../Core/Src/time.c:117:6:changeAlarmMin	16	static
+../Core/Src/time.c:123:6:alarmConfirm	32	static
+../Core/Src/time.c:140:6:countdownPage	40	static

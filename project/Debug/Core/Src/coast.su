@@ -1,2 +1,4 @@
 ../Core/Src/coast.c:11:6:homePage	32	static
 ../Core/Src/coast.c:28:6:flashlightPage	32	static
+../Core/Src/coast.c:44:6:flash_on	16	static
+../Core/Src/coast.c:60:6:flash_off	16	static
