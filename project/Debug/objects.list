@@ -4,6 +4,7 @@
 "./Core/Src/interrupt.o"
 "./Core/Src/lcd.o"
 "./Core/Src/main.o"
+"./Core/Src/options.o"
 "./Core/Src/state.o"
 "./Core/Src/stm32f3xx_hal_msp.o"
 "./Core/Src/stm32f3xx_it.o"

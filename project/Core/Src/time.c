@@ -61,10 +61,10 @@ void updateTime(uint8_t row, uint8_t col) {
 	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
 	LCD_SendCmd(baseCmd + col);
 
-	sprintf(buff, "%02d:%02d ", hours, minutes);
+	sprintf(buff, "|%02d:%02d ", hours, minutes);
 	LCD_SendStr(buff);
 
-	sprintf(dateBuff, " %02d/%02d", day, month);
+	sprintf(dateBuff, "%02d/%02d", day, month);
 	LCD_SendStr(dateBuff);
 }
 

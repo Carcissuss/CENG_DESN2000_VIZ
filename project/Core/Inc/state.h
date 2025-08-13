@@ -6,7 +6,8 @@ typedef enum {
     TIME,
     ALARM,
 	FITNESS,
-	FLASHLIGHT,
+	OPT,
+	SETTINGS,
 	COUNTDOWN,
 	STOPWATCH
 } ScreenState;

@@ -28,6 +28,7 @@
 #include "interrupt.h"
 #include "buzzer.h"
 #include "vibration.h"
+#include "options.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +61,7 @@ uint32_t decimal_second_count = 0;
 uint32_t button_double_press_time[4] = {0, 0, 0, 0};
 uint32_t button_holding_time[4] = {0, 0, 0, 0};
 
+bool screenNeedsRefresh = false;
 bool timeFormatChanged = false;
 
 /* button press check */
@@ -82,6 +84,9 @@ bool button_sound = false;
 bool enable_vibration = true;
 bool button_vibration = false;
 bool enable_time_update = false;
+
+/* flashlight feature */
+volatile bool flash = false;
 
 /* screen navigation */
 typedef struct {
@@ -127,20 +132,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* B1 is pressed */
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0) {
 			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
 			switch (currentScreen) {
 				case HOME:
 					currentScreen = TIME;
 					break;
+
+				case SETTINGS:
+					flash  = !flash;
+					flash_state();
+					screenNeedsRefresh = true;
+					break;
+
 				case ALARM:
 					changeAlarmMin();
-				default:
-			}
+					break;
+				}
 //			check_double_press(0, is_single_press, is_double_press, is_holding,
 //					decimal_second_count, double_press_interval,
 //					button_double_press_time, button_holding_time);
@@ -189,13 +200,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	} else if (GPIO_Pin == SW1_Pin) {
 		/* The sw1 pin is pressed */
 		if (HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == 1) {
-			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
+
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
+
+			switch (currentScreen) {
+				case SETTINGS:
+					if (enable_sound) generate_sound(460, 50, htim1);
+					enable_sound = !enable_sound;
+					screenNeedsRefresh = true;
+			}
+
 //			check_double_press(1, is_single_press, is_double_press, is_holding,
 //					decimal_second_count, double_press_interval,
 //					button_double_press_time, button_holding_time);
@@ -247,17 +265,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* The sw2 pin is pressed */
 		if (HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == 1) {
 			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
-			if (button_sound) {
-			  /* frequency ： duration ：volume : htim1 */
-			  play_note(460, 150, 50, htim1);
-			  play_note(300, 50, 50, htim1);
-			  button_sound = false;
-			}
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
 //			currentScreen = HOME;
 //			check_double_press(2, is_single_press, is_double_press, is_holding,
@@ -298,42 +309,52 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				button_double_press_time[2] = decimal_second_count;
 			}
 			if (is_holding[2] == true) {
-				switch (currentScreen){
-				//SW2 Held, HOME
-					case TIME:
-						currentScreen = HOME;
-						break;
-					case ALARM:
-						currentScreen = HOME;
-						break;
-				}
+				currentScreen = HOME;
 			}
 
 		}
-	} else {
+	} else if (GPIO_Pin == SW3_Pin){
 		/* The sw3 pin is pressed */
-		if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == 1) {
+		if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == GPIO_PIN_SET) {
 			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
 			if (is_double_press[2]) {
-				switch (currentScreen){
+				switch (currentScreen) {
 				case ALARM:
 					switchAMPM();
 					break;
 				}
 			}
 			switch (currentScreen) {
+				case HOME:
+					previousScreen = currentScreen;
+					currentScreen = OPT;
+					break;
+				case OPT:
+					previousScreen = currentScreen;
+					currentScreen = SETTINGS;
+					break;
 				case TIME:
 					currentScreen = ALARM;
 					break;
 				case ALARM:
 					changeAlarmHour();
+					break;
+				case SETTINGS:
+					enable_vibration = !enable_vibration;
+					if (enable_vibration) {
+						vibration_call(32);
+					} else {
+						vibration_stop();
+					}
+					screenNeedsRefresh = true;
+					break;
 			}
+
 //			check_double_press(3, is_single_press, is_double_press, is_holding,
 //					decimal_second_count, double_press_interval,
 //					button_double_press_time, button_holding_time);
@@ -375,16 +396,18 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim == &htim6) {
-		seconds++;
-	} else if (htim == &htim7) {
-		period_count++;
-		if (period_count >= 100) {
-			period_count = 0;
-			decimal_second_count++;
-		}
-	}
+    if (htim == &htim6) {
+        seconds++;
+    } else if (htim == &htim7) {
+        period_count++;
+        if (period_count >= 100) {
+            period_count = 0;
+            decimal_second_count++;
+        }
+        vibration_tick_1ms(); // vibration ticker
+    }
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -443,11 +466,11 @@ int main(void)
 //	  } else {
 //		  stop_sound(htim1);
 //	  }
-	  if (button_vibration) {
-		  generate_vibration();
-		  button_vibration = false;
-	  }
-	  if (currentScreen != previousScreen || timeFormatChanged) {
+//	  if (button_vibration) {
+//		  generate_vibration();
+//		  button_vibration = false;
+//	  }
+	  if (currentScreen != previousScreen || screenNeedsRefresh || timeFormatChanged) {
 	  	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 	  	coast_asm_delay(2);
 
@@ -463,12 +486,19 @@ int main(void)
 	  		case ALARM:
 	  			alarmPage();
 	  			break;
+	  		case OPT:
+	  			OPTpage();
+	  			break;
+	  		case SETTINGS:
+	  			settingsPage();
+	  			break;
 	  	}
 	  	previousScreen = currentScreen;
-	  	timeFormatChanged = false;  // ✅ clear the flag
+	  	screenNeedsRefresh = false;  // clear the flags
+	  	timeFormatChanged = false;
 	  	last_tick = HAL_GetTick();
 	  }
-	    HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, 1);
+	    //HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, 1);
 	  /* UPDATE TIME EVERY SECOND ELAPSED */
 	  if ((HAL_GetTick() - last_tick) >= 1000) {
 	  	switch (currentScreen) {
@@ -584,7 +614,7 @@ static void MX_RTC_Init(void)
   {
     Error_Handler();
   }
-  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
   sDate.Month = RTC_MONTH_AUGUST;
   sDate.Date = 0x3;
   sDate.Year = 0x25;
@@ -825,11 +855,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SW1_Pin SW2_Pin */
-  GPIO_InitStruct.Pin = SW1_Pin|SW2_Pin;
+  /*Configure GPIO pin : SW1_Pin */
+  GPIO_InitStruct.Pin = SW1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(SW1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : USART_TX_Pin USART_RX_Pin */
   GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin;
@@ -838,6 +868,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SW2_Pin */
+  GPIO_InitStruct.Pin = SW2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SW2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD2_Pin COILB_Pin Control_RS_Pin */
   GPIO_InitStruct.Pin = LD2_Pin|COILB_Pin|Control_RS_Pin;

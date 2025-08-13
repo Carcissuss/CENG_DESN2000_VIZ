@@ -60,8 +60,8 @@ all: main-build
 main-build: project.elf secondary-outputs
 
 # Tool invocations
-project.elf project.map: $(OBJS) $(USER_OBJS) C:\Users\Admin\OneDrive\Desktop\unsw\2000\CENG_DESN2000_VIZ-1\project\STM32F303RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "project.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Admin\OneDrive\Desktop\unsw\2000\CENG_DESN2000_VIZ-1\project\STM32F303RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="project.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+project.elf project.map: $(OBJS) $(USER_OBJS) D:\Downloads\CENG_DESN2000_VIZ-v-draft-1\CENG_DESN2000_VIZ-v-draft-1\project\STM32F303RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "project.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Downloads\CENG_DESN2000_VIZ-v-draft-1\CENG_DESN2000_VIZ-v-draft-1\project\STM32F303RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="project.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
