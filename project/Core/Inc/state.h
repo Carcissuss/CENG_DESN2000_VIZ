@@ -5,8 +5,10 @@ typedef enum {
     HOME,
     TIME,
     ALARM,
+	ALARM_SET,
 	FITNESS,
-	FLASHLIGHT,
+	OPT,
+	SETTINGS,
 	COUNTDOWN,
 	STOPWATCH
 } ScreenState;

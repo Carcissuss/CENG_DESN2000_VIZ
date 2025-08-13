@@ -8,3 +8,4 @@ void changeAlarmMin();
 void alarmConfirm();
 void updateTime(uint8_t row, uint8_t col);
 void updateAlarm(uint8_t row, uint8_t col);
+
