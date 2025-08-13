@@ -3,8 +3,9 @@
 #include "main.h"
 #include "coast.h"
 #include "lcd.h"
+#include "globals.h"
 
-RTC_TimeTypeDef sAlarm;
+RTC_AlarmTypeDef sAlarm;
 bool is_24_hour_format = true;
 extern bool timeFormatChanged;
 
@@ -18,7 +19,6 @@ void timePage() {
 	char *weekDayMap[7] = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
 	char *weekday = weekDayMap[sDate.WeekDay - 1];
 
-	//uint8_t year = sDate.Year;
 	sprintf(buff, "%s ", weekday);
 
 	LCD_SendStr(buff);
@@ -37,7 +37,7 @@ void timePage() {
 }
 
 void updateTime(uint8_t row, uint8_t col) {
-	char buff[8];  // Enough for HH:MM + null
+	char buff[8];
 	char dateBuff[8];
 
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
@@ -61,7 +61,7 @@ void updateTime(uint8_t row, uint8_t col) {
 	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
 	LCD_SendCmd(baseCmd + col);
 
-	sprintf(buff, "%02d:%02d ", hours, minutes);
+	sprintf(buff, "%02d:%02d ", displayHour, minutes);
 	LCD_SendStr(buff);
 
 	sprintf(dateBuff, " %02d/%02d", day, month);
@@ -70,22 +70,45 @@ void updateTime(uint8_t row, uint8_t col) {
 
 
 void alarmPage() {
-	char buff[16];
+	char buff[20];
+	LCD_SendCmd(LCD_CLEAR_DISPLAY);
+//	coast_asm_delay(2);
 
+	LCD_SendCmd(0x80);
 	LCD_SendStr("Set Alarm for:");
 
 	LCD_SendCmd(LCD_SECOND_LINE);
+	uint8_t h = sAlarm.AlarmTime.Hours;
+	uint8_t m = sAlarm.AlarmTime.Minutes;
 
-	uint8_t hours =  sAlarm.Hours;
-	uint8_t minutes = sAlarm.Minutes;
-
-	sprintf(buff, "%02d:%02d A.M", hours, minutes);
-	LCD_SendStr(buff);
-
-	if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
-	{
-		Error_Handler();
+	if (is_24_hour_format) {
+		snprintf(buff, sizeof(buff), "%02d:%02d", h, m);
+	} else {
+		const char *ampm = (h >= 12) ? "P.M" : "A.M";
+		uint8_t dh = h % 12;
+		if (dh == 0) dh = 12;
+		snprintf(buff, sizeof(buff), "%02d:%02d %s", dh, m, ampm);
 	}
+	LCD_SendStr(buff);
+}
+
+void updateAlarm(uint8_t row, uint8_t col) {
+
+	char buff[16];
+	uint8_t h = sAlarm.AlarmTime.Hours;
+	uint8_t m = sAlarm.AlarmTime.Minutes;
+
+	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0;
+	LCD_SendCmd(baseCmd + col);
+
+	if (is_24_hour_format) {
+		snprintf(buff, sizeof(buff), "%02d:%02d", h, m);
+	} else {
+		const char *ampm = (h >= 12) ? "P.M" : "A.M";
+		uint8_t dh = h % 12; if (dh == 0) dh = 12;
+		snprintf(buff, sizeof(buff), "%02d:%02d %s", dh, m, ampm);
+	}
+	LCD_SendStr(buff);
 }
 
 void switchTimeFormat() {
@@ -93,41 +116,43 @@ void switchTimeFormat() {
     timeFormatChanged = true;
 }
 
-
 void switchAMPM(){
-	sAlarm.Hours += 12;
-	char buff[16];
-	uint8_t baseCmd = (2) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
-	LCD_SendCmd(baseCmd + 6);
-	if (sAlarm.TimeFormat == RTC_HOURFORMAT12_AM) {
-		sprintf(buff, "A");
-		LCD_SendStr(buff);
-	} else if (sAlarm.TimeFormat == RTC_HOURFORMAT12_PM) {
-		sprintf(buff, "P");
-		LCD_SendStr(buff);
-	}
+
+	if (is_24_hour_format) return;
+	uint8_t h = sAlarm.AlarmTime.Hours; // 0..23
+	    if (h >= 12) {
+	        sAlarm.AlarmTime.Hours = h - 12; // PM -> AM
+	    } else {
+	        sAlarm.AlarmTime.Hours = h + 12; // AM -> PM
+	    }
 }
 
 void changeAlarmHour() {
-	if (sTime.TimeFormat == RTC_HOURFORMAT_12) {
-		if (sAlarm.Hours <= 12) {
-			sAlarm.Hours += 1;
-		} else {
-			sAlarm.Hours = 1;
-		}
-	} else if (sTime.TimeFormat == RTC_HOURFORMAT_24) {
-		if (sAlarm.Hours <= 23) {
-			sAlarm.Hours += 1;
-		} else {
-			sAlarm.Hours = 0;
-		}
-	}
+	uint8_t h = sAlarm.AlarmTime.Hours;
+	h = (h + 1) % 24;
+	sAlarm.AlarmTime.Hours = h;
 }
 
 void changeAlarmMin() {
-	if (sAlarm.Minutes < 60) {
-		sAlarm.Minutes += 5;
-	} else {
-		sAlarm.Minutes = 0;
+	uint8_t m = sAlarm.AlarmTime.Minutes;
+	m = (m + 5) % 60;
+	sAlarm.AlarmTime.Minutes = m;
+}
+
+void alarmConfirm(void) {
+
+	if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK) {
+		Error_Handler();
 	}
+
+	LCD_SendCmd(LCD_CLEAR_DISPLAY);   // clear display for confirmation
+	coast_asm_delay(2);
+
+	LCD_SendStr("ALARM SET FOR:");    // top line
+	LCD_SendCmd(LCD_SECOND_LINE);
+	char buffer[16];
+	snprintf(buffer, sizeof(buffer), "%02d:%02d", sAlarm.AlarmTime.Hours, sAlarm.AlarmTime.Minutes);
+	LCD_SendStr(buffer);
+
+
 }
