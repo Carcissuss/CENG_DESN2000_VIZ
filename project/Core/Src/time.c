@@ -3,9 +3,10 @@
 #include "main.h"
 #include "coast.h"
 #include "lcd.h"
-#include "globals.h"
 
-RTC_AlarmTypeDef sAlarm;
+extern RTC_HandleTypeDef hrtc;
+extern RTC_AlarmTypeDef sAlarm;
+
 bool is_24_hour_format = true;
 extern bool timeFormatChanged;
 
@@ -125,25 +126,26 @@ void switchAMPM(){
 	    } else {
 	        sAlarm.AlarmTime.Hours = h + 12; // AM -> PM
 	    }
+
 }
 
 void changeAlarmHour() {
 	uint8_t h = sAlarm.AlarmTime.Hours;
 	h = (h + 1) % 24;
 	sAlarm.AlarmTime.Hours = h;
+
 }
 
 void changeAlarmMin() {
 	uint8_t m = sAlarm.AlarmTime.Minutes;
 	m = (m + 5) % 60;
 	sAlarm.AlarmTime.Minutes = m;
+
 }
 
 void alarmConfirm(void) {
 
-	if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK) {
-		Error_Handler();
-	}
+	HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN);
 
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);   // clear display for confirmation
 	coast_asm_delay(2);
@@ -153,6 +155,5 @@ void alarmConfirm(void) {
 	char buffer[16];
 	snprintf(buffer, sizeof(buffer), "%02d:%02d", sAlarm.AlarmTime.Hours, sAlarm.AlarmTime.Minutes);
 	LCD_SendStr(buffer);
-
 
 }

@@ -28,7 +28,6 @@
 #include "interrupt.h"
 #include "buzzer.h"
 #include "vibration.h"
-#include "globals.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +47,12 @@
 
 /* Private variables ---------------------------------------------------------*/
 RTC_HandleTypeDef hrtc;
+RTC_AlarmTypeDef sAlarm = {0};   // <-- single global definition
+
+volatile bool alarm_active = false;
+static uint32_t alarm_start_tick = 0;
+static uint32_t last_blink_tick = 0;
+static uint32_t last_beep_tick = 0;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
@@ -143,9 +148,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 					break;
 				default:
 			}
-//			check_double_press(0, is_single_press, is_double_press, is_holding,
-//					decimal_second_count, double_press_interval,
-//					button_double_press_time, button_holding_time);
 			if (is_single_press[0] == true &&
 				is_double_press[0] == false &&
 				(decimal_second_count - button_double_press_time[0]) <= double_press_interval) {
@@ -192,9 +194,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_vibration) {
 				button_vibration = true;
 			}
-//			check_double_press(1, is_single_press, is_double_press, is_holding,
-//					decimal_second_count, double_press_interval,
-//					button_double_press_time, button_holding_time);
 
 			if (is_single_press[1] == true &&
 				is_double_press[1] == false &&
@@ -260,10 +259,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				button_vibration = true;
 			}
 
-//			currentScreen = HOME;
-//			check_double_press(2, is_single_press, is_double_press, is_holding,
-//					decimal_second_count, double_press_interval,
-//					button_double_press_time, button_holding_time);
 		    if (is_single_press[2] == true &&
 		        is_double_press[2] == false &&
 		        (decimal_second_count - button_double_press_time[2]) <= double_press_interval) {
@@ -321,8 +316,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (enable_vibration) {
 				button_vibration = true;
 			}
-
-
 			if (is_single_press[3] == true &&
 				is_double_press[3] == false &&
 				(decimal_second_count - button_double_press_time[3]) <= double_press_interval) {
@@ -369,7 +362,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						break;
 				}
 			}
-
 		}
 	}
 }
@@ -387,21 +379,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
-    // Trigger your sound and vibration here
-
-	if (enable_sound) {
-		button_sound = true;
-	}
-	if (button_sound) {
-	  /* frequency ： duration ：volume : htim1 */
-	  play_note(460, 150, 50, htim1);
-	  play_note(300, 50, 50, htim1);
-	  button_sound = false;
-	}
-	if (enable_vibration) {
-		button_vibration = true;
-	}
-
+	alarm_active = true;
+	alarm_start_tick = HAL_GetTick();
+	last_blink_tick = alarm_start_tick;
+	last_beep_tick = alarm_start_tick;
 }
 
 /* USER CODE END 0 */
@@ -455,18 +436,25 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//	  if (button_sound) {
-//		  /* frequency ： duration ：volume : htim1 */
-//		  play_note(460, 150, 50, htim1);
-//		  play_note(300, 50, 50, htim1);
-//		  button_sound = false;
-//	  } else {
-//		  stop_sound(htim1);
-//	  }
+
+	  if (alarm_active) {
+	      if (HAL_GetTick() - alarm_start_tick >= 5000) {
+	          alarm_active = false;
+	          HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_RESET);
+	          stop_sound(htim1);
+	      } else {
+	          if (HAL_GetTick() - last_beep_tick >= 500) {
+	              play_note(460, 100, 50, htim1);
+	              last_beep_tick = HAL_GetTick();
+	          }
+	      }
+	  }
+
 	  if (button_vibration) {
 		  generate_vibration();
 		  button_vibration = false;
 	  }
+
 	  if (currentScreen != previousScreen || timeFormatChanged) {
 			LCD_SendCmd(LCD_CLEAR_DISPLAY);
 			coast_asm_delay(2);
@@ -490,7 +478,7 @@ int main(void)
 
 			}
 			previousScreen = currentScreen;
-			timeFormatChanged = false;  // ✅ clear the flag
+			timeFormatChanged = false;  // clear the flag
 			last_tick = HAL_GetTick();
 
 	  }
@@ -579,7 +567,7 @@ static void MX_RTC_Init(void)
 
   RTC_TimeTypeDef sTime = {0};
   RTC_DateTypeDef sDate = {0};
-  RTC_AlarmTypeDef sAlarm = {0};
+  //RTC_AlarmTypeDef sAlarm = {0};
 
   /* USER CODE BEGIN RTC_Init 1 */
 
@@ -606,7 +594,7 @@ static void MX_RTC_Init(void)
   /** Initialize RTC and set the Time and Date
   */
   sTime.Hours = 0x8;
-  sTime.Minutes = 0x30;
+  sTime.Minutes = 0x34;
   sTime.Seconds = 0x0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -632,18 +620,19 @@ static void MX_RTC_Init(void)
   sAlarm.AlarmTime.SubSeconds = 0x0;
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  sAlarm.AlarmMask = RTC_ALARMMASK_DATEWEEKDAY;
+  sAlarm.AlarmMask = RTC_ALARMMASK_DATEWEEKDAY; // match exactly hours, minutes, seconds
   sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
   sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-  sAlarm.AlarmDateWeekDay = 0x1;
+  sAlarm.AlarmDateWeekDay = 0;
   sAlarm.Alarm = RTC_ALARM_A;
   if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-  //HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
-  //HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
+
+  HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
 
   /* USER CODE END RTC_Init 2 */
 
