@@ -15,6 +15,7 @@ extern RTC_AlarmTypeDef sAlarm;
 bool is_24_hour_format = true;
 extern bool timeFormatChanged;
 
+/* Sets up the Time Page and displays in either 24H or 12H depending on format flag */
 void timePage() {
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 	char buff[16];
@@ -33,15 +34,14 @@ void timePage() {
 
 	LCD_SendStr("ALARM");
 
-
 	if (is_24_hour_format) {
 	    LCD_SendStr("   24H_TIME");
 	} else {
 	    LCD_SendStr("   12H_TIME");
 	}
-
 }
 
+/* For custom time setting, sets up the page */
 void timeSetPage() {
 	char buff[20];
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
@@ -64,6 +64,7 @@ void timeSetPage() {
 	LCD_SendStr(buff);
 }
 
+/* Confirms new time selection based on user input */
 void timeSetConfirm() {
 	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
@@ -72,11 +73,13 @@ void timeSetConfirm() {
 
 	LCD_SendStr("TIME SET TO:");    // top line
 	LCD_SendCmd(LCD_SECOND_LINE);
+	
 	char buffer[16];
 	snprintf(buffer, sizeof(buffer), "%02d:%02d", sTime.Hours, sTime.Minutes);
 	LCD_SendStr(buffer);
 }
 
+/* Refreshes time being set by user on the CUSTOM_TIME page */
 void updateSetTime(uint8_t row, uint8_t col) {
 	char buff[16];
 	uint8_t h = sTime.Hours;
@@ -95,6 +98,7 @@ void updateSetTime(uint8_t row, uint8_t col) {
 		LCD_SendStr(buff);
 }
 
+/* Updates time and date on Home and Time pages */
 void updateTime(uint8_t row, uint8_t col) {
 	char buff[8];
 	char dateBuff[8];
@@ -125,10 +129,9 @@ void updateTime(uint8_t row, uint8_t col) {
 
 	sprintf(buff, " %02d:%02d", displayHour, minutes);
 	LCD_SendStr(buff);
-
-
 }
 
+/* Sets up the page to change the alarm */
 void alarmPage() {
 	char buff[20];
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
@@ -151,6 +154,7 @@ void alarmPage() {
 	LCD_SendStr(buff);
 }
 
+/* Refreshes the alarm the user is setting on the alarm page */
 void updateAlarm(uint8_t row, uint8_t col) {
 
 	char buff[16];
@@ -170,11 +174,13 @@ void updateAlarm(uint8_t row, uint8_t col) {
 	LCD_SendStr(buff);
 }
 
+/* Flag for switching between 24H and 12H */
 void switchTimeFormat() {
     is_24_hour_format = !is_24_hour_format;
     timeFormatChanged = true;
 }
 
+/* Switches between AM or PM on the Alarm */
 void switchAMPM(){
 
 	if (is_24_hour_format) return;
@@ -186,8 +192,8 @@ void switchAMPM(){
 	    }
 }
 
+/* Switches between AM or PM on the custom time setting */
 void switchTimeAMPM(){
-
 	if (is_24_hour_format) return;
 	uint8_t h = sTime.Hours; // 0..23
 	    if (h >= 12) {
@@ -197,26 +203,28 @@ void switchTimeAMPM(){
 	    }
 }
 
+/* Changes hour of alarm by iterating by 1 hour on SW3 press */
 void changeAlarmHour() {
 	uint8_t h = sAlarm.AlarmTime.Hours;
 	h = (h + 1) % 24;
 	sAlarm.AlarmTime.Hours = h;
-
 }
 
+/* Changes minute of alarm by iterating by 5 minutes on Blue B1 press */
 void changeAlarmMin() {
 	uint8_t m = sAlarm.AlarmTime.Minutes;
 	m = (m + 5) % 60;
 	sAlarm.AlarmTime.Minutes = m;
-
 }
 
+/* Changes hour of Time by 1 */
 void changeTimeHour() {
 	uint8_t h = sTime.Hours;
 	h = (h + 1) % 24;
 	sTime.Hours = h;
 }
 
+/* Changes minute of custom Time by 5 if double press or 1 if single press */
 void changeTimeMin(int interval) {
 	uint8_t m = sTime.Minutes;
 	if (interval == 5) {
@@ -228,8 +236,8 @@ void changeTimeMin(int interval) {
 	sTime.Minutes = m;
 }
 
+/* Confirms the selected alarm */
 void alarmConfirm(void) {
-
 	HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN);
 
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);   // clear display for confirmation
@@ -237,9 +245,10 @@ void alarmConfirm(void) {
 
 	LCD_SendStr("ALARM SET FOR:");    // top line
 	LCD_SendCmd(LCD_SECOND_LINE);
+	
 	char buffer[16];
 	snprintf(buffer, sizeof(buffer), "%02d:%02d", sAlarm.AlarmTime.Hours, sAlarm.AlarmTime.Minutes);
 	LCD_SendStr(buffer);
-
 }
+
 
