@@ -109,10 +109,10 @@ void Error_Handler(void);
 #define Data_D7_GPIO_Port GPIOC
 #define Control_E_Pin GPIO_PIN_2
 #define Control_E_GPIO_Port GPIOD
-#define LED_D2_Pin GPIO_PIN_3
+#define LED_D4_Pin GPIO_PIN_3
+#define LED_D4_GPIO_Port GPIOB
+#define LED_D2_Pin GPIO_PIN_4
 #define LED_D2_GPIO_Port GPIOB
-#define LED_D2B4_Pin GPIO_PIN_4
-#define LED_D2B4_GPIO_Port GPIOB
 #define LED_D3_Pin GPIO_PIN_5
 #define LED_D3_GPIO_Port GPIOB
 #define RCLK_Latch_Pin GPIO_PIN_7

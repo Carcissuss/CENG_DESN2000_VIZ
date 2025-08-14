@@ -27,7 +27,7 @@ void homePage() {
 
 void OPTpage(uint32_t ldrValue) {
 	char buffer[16];
-	snprintf(buffer, sizeof(buffer), "%ld", ldrValue);
+	snprintf(buffer, sizeof(buffer), "%ld(^=^)", ldrValue);
 
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 	LCD_SendStr(buffer);
@@ -40,7 +40,7 @@ void OPTpage(uint32_t ldrValue) {
 
 void updateOpt(uint32_t ldrValue) {
 	char buffer[16];
-	snprintf(buffer, sizeof(buffer), "%ld", ldrValue);
+	snprintf(buffer, sizeof(buffer), "%ld(^=^)", ldrValue);
 	LCD_SendCmd(LCD_RETURN_HOME);
 	LCD_SendStr(buffer);
 }

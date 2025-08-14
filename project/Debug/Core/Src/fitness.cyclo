@@ -6,10 +6,10 @@
 ../Core/Src/fitness.c:92:6:secondCountdown	2
 ../Core/Src/fitness.c:99:6:updateCountdown	1
 ../Core/Src/fitness.c:105:6:resetCountdown	1
-../Core/Src/fitness.c:111:6:runCountdown	9
-../Core/Src/fitness.c:155:6:stopwatchPage	1
-../Core/Src/fitness.c:166:6:lapStopwatch	1
-../Core/Src/fitness.c:176:6:resetStopwatch	1
-../Core/Src/fitness.c:181:6:toggleStopwatch	2
-../Core/Src/fitness.c:189:6:updateStopwatch	1
-../Core/Src/fitness.c:195:6:runStopwatch	5
+../Core/Src/fitness.c:111:6:runCountdown	8
+../Core/Src/fitness.c:152:6:stopwatchPage	1
+../Core/Src/fitness.c:163:6:lapStopwatch	1
+../Core/Src/fitness.c:173:6:resetStopwatch	1
+../Core/Src/fitness.c:178:6:toggleStopwatch	2
+../Core/Src/fitness.c:186:6:updateStopwatch	1
+../Core/Src/fitness.c:192:6:runStopwatch	5

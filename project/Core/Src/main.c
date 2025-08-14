@@ -62,6 +62,7 @@ TIM_HandleTypeDef htim7;
 uint32_t last_tick = 0;
 uint32_t second = 0;
 uint32_t period_count = 0;
+uint32_t millisecond = 0;
 uint32_t lastCountdownSecond = 0;
 uint32_t lastStopwatchSecond = 0;
 uint32_t decimal_second_count = 0;
@@ -112,6 +113,7 @@ Stopwatch stopwatch = {
 bool lapStopwatchFlag = false;
 
 /* ldr value get */
+uint32_t modulus = 0;
 uint32_t ldrValue = 0;
 uint32_t dutyCycle = 0;
 //static float s_ldr_filt = 0.0f;     // 滤波后的LDR
@@ -469,42 +471,50 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim6) {
 		second++;
 	} else if (htim == &htim7) {
-
-		if (period_count >= 100) {
-			period_count = 0;
+		/* count every 0.1 second */
+		millisecond++;
+		if (millisecond == 1000) {
 			decimal_second_count++;
+			millisecond = 0;
 		}
-		period_count++;
+		/* ldr change ambient light frequency counting */
+		if (period_count = 100) {
+			period_count = 0;
+		} else {
+			period_count++;
+		}
 		vibration_tick_1ms(); // vibration ticker
+		if (!flash) {
+			/* ldr running code */
+			if (period_count == dutyCycle) {
+				HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED_D2_GPIO_Port, LED_D2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-		if (period_count == dutyCycle) {
-			HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED_D2_GPIO_Port, LED_D2_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOB, SER_Data_IN_Pin, GPIO_PIN_RESET);
+				for (int i = 0; i < 16; i++) {
+					HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_SET);
+					HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_RESET);
+				}
+				HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
+			} else if (period_count == 0) {
+				HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED_D2_GPIO_Port, LED_D2_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 
-			HAL_GPIO_WritePin(GPIOB, SER_Data_IN_Pin, GPIO_PIN_RESET);
-			for (int i = 0; i < 16; i++) {
-				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOB, SER_Data_IN_Pin, GPIO_PIN_SET);
+				for (int i = 0; i < 16; i++) {
+					HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_SET);
+					HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_RESET);
+				}
+				HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
 			}
-			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
-		} else if (period_count == 0) {
-			HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(LED_D2_GPIO_Port, LED_D2_Pin, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-
-			HAL_GPIO_WritePin(GPIOB, SER_Data_IN_Pin, GPIO_PIN_SET);
-			for (int i = 0; i < 16; i++) {
-				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_RESET);
-			}
-			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
 		}
 	}
 }
@@ -1020,7 +1030,7 @@ static void MX_TIM7_Init(void)
 
   /* USER CODE END TIM7_Init 1 */
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 999;
+  htim7.Init.Prescaler = 99;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 71;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -1067,8 +1077,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, LD2_Pin|COILB_Pin|Control_RS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin
-                          |LED_D2B4_Pin|LED_D3_Pin|RCLK_Latch_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D4_Pin
+                          |LED_D2_Pin|LED_D3_Pin|RCLK_Latch_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Control_E_GPIO_Port, Control_E_Pin, GPIO_PIN_RESET);
@@ -1115,10 +1125,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SW3_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : COILD_Pin LED_D1_Pin SER_Data_IN_Pin LED_D2_Pin
-                           LED_D2B4_Pin LED_D3_Pin RCLK_Latch_Pin */
-  GPIO_InitStruct.Pin = COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D2_Pin
-                          |LED_D2B4_Pin|LED_D3_Pin|RCLK_Latch_Pin;
+  /*Configure GPIO pins : COILD_Pin LED_D1_Pin SER_Data_IN_Pin LED_D4_Pin
+                           LED_D2_Pin LED_D3_Pin RCLK_Latch_Pin */
+  GPIO_InitStruct.Pin = COILD_Pin|LED_D1_Pin|SER_Data_IN_Pin|LED_D4_Pin
+                          |LED_D2_Pin|LED_D3_Pin|RCLK_Latch_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
