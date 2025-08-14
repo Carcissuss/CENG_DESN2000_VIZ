@@ -15,7 +15,7 @@ static volatile uint16_t ms_since_last_step = 0;
 /* Step speed: every 1 ms */
 #define STEP_PERIOD_MS 2
 
-/* 2-coil full-step sequence (matches your earlier working pattern) */
+/* 2-coil full-step sequence */
 static inline void write_phase(uint8_t p) {
     switch (p & 3) {	// (p&3) for keeping value b/w 0-3
         case 0: // B+C
@@ -45,7 +45,6 @@ static inline void write_phase(uint8_t p) {
     }
 }
 
-
 /* for asynchronous functioanlity via TIM7 tick */
 void vibration_call(uint16_t steps) {
     if (steps == 0) return;
@@ -54,7 +53,7 @@ void vibration_call(uint16_t steps) {
     ms_since_last_step = 0;
 }
 
-/* stoping vibration */
+/* stopping vibration */
 void vibration_stop() {
     steps_left = 0;
     HAL_GPIO_WritePin(COILA_GPIO_Port, COILA_Pin, GPIO_PIN_RESET);
@@ -80,10 +79,8 @@ void vibration_tick_1ms() {
     }
 }
 
+/* Generates vibration through the stepper motor */
 void generate_vibration(void) {
-//	for (int i = 0; i < 4; i++) {
-//		HAL_GPIO_WritePin(coil_port[i], coil_pin[i], GPIO_PIN_RESET);
-//	}
 	// 1
 	HAL_GPIO_WritePin(COILA_GPIO_Port, COILA_Pin, 0);
 	HAL_GPIO_WritePin(COILB_GPIO_Port, COILB_Pin, 1);
@@ -104,6 +101,7 @@ void generate_vibration(void) {
 	HAL_GPIO_WritePin(COILC_GPIO_Port, COILC_Pin, 0);
 	HAL_GPIO_WritePin(COILD_GPIO_Port, COILD_Pin, 1);
 	coast_asm_delay(1);
+	
 	// 4
 	HAL_GPIO_WritePin(COILA_GPIO_Port, COILA_Pin, 0);
 	HAL_GPIO_WritePin(COILB_GPIO_Port, COILB_Pin, 0);
