@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-// One mechanical revolution of your stepper
+// One mechanical revolution of stepper
 #define STEPS_PER_REV 512
 
 void vibration_call(uint16_t steps);   // schedule N steps (non-blocking)
