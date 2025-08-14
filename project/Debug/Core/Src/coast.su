@@ -1,1 +1,3 @@
-../Core/Src/coast.c:10:6:homePage	32	static
+../Core/Src/coast.c:11:6:homePage	32	static
+../Core/Src/coast.c:28:6:OPTpage	32	static
+../Core/Src/coast.c:41:6:updateOpt	32	static

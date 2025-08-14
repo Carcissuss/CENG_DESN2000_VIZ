@@ -134,6 +134,9 @@ void Error_Handler(void);
 
 #define LCD_E_Pin GPIO_PIN_2
 #define LCD_E_Port GPIOD
+
+#define LED_D4_Pin GPIO_PIN_3
+#define LED_D4_GPIO_Port GPIOB
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

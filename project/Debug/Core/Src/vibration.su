@@ -1,1 +1,5 @@
-../Core/Src/vibration.c:13:6:generate_vibration	8	static
+../Core/Src/vibration.c:19:20:write_phase	16	static
+../Core/Src/vibration.c:50:6:vibration_call	16	static
+../Core/Src/vibration.c:58:6:vibration_stop	8	static
+../Core/Src/vibration.c:67:6:vibration_tick_1ms	8	static
+../Core/Src/vibration.c:83:6:generate_vibration	8	static

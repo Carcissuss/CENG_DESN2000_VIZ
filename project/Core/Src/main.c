@@ -28,6 +28,9 @@
 #include "interrupt.h"
 #include "buzzer.h"
 #include "vibration.h"
+#include "options.h"
+#include "fitness.h"
+#include "ldr.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +49,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc2;
+
 RTC_HandleTypeDef hrtc;
 
 TIM_HandleTypeDef htim1;
@@ -53,13 +58,18 @@ TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
-uint32_t last_tick = 0;
-uint32_t seconds = 0;
-uint32_t period_count = 0;
-uint32_t decimal_second_count = 0;
-uint32_t button_double_press_time[4];
-uint32_t button_holding_time[4];
 
+uint32_t last_tick = 0;
+uint32_t second = 0;
+uint32_t period_count = 0;
+uint32_t lastCountdownSecond = 0;
+uint32_t lastStopwatchSecond = 0;
+uint32_t decimal_second_count = 0;
+uint32_t button_double_press_time[4] = {0, 0, 0, 0};
+uint32_t button_holding_time[4] = {0, 0, 0, 0};
+
+bool timeFormatChanged = false;
+bool screenNeedsRefresh = false;
 /* button press check */
 bool button1 = false;
 bool button2 = false;
@@ -67,12 +77,12 @@ bool button3 = false;
 bool buttonB = false;
 
 /* double press interval and holding time */
-uint32_t double_press_interval = 10;
-uint32_t holding_bound = 15;
+uint32_t double_press_interval = 3;
+uint32_t holding_bound = 10;
 /* press check */
-bool is_single_press[4];
-bool is_double_press[4];
-bool is_holding[4];
+bool is_single_press[4] = {false, false, false, false};
+bool is_double_press[4] = {false, false, false, false};
+bool is_holding[4] = {false, false, false, false};
 
 /* sound setting */
 bool enable_sound = true;
@@ -81,24 +91,42 @@ bool enable_vibration = true;
 bool button_vibration = false;
 bool enable_time_update = false;
 
-/* screen navigation */
-typedef struct {
-	bool screen_homepage;
-	bool sceen_countdown;
-	bool screen_stopwatch;
-	bool screen_alarm;
-	bool screen_setting_1;
-	bool screen_setting_2;
-}Navigation;
+/* flashlight feature */
+volatile bool flash = false;
 
-Navigation screen = {
-    .screen_homepage = true,
-    .sceen_countdown = false,
-    .screen_stopwatch = false,
-    .screen_alarm = false,
-    .screen_setting_1 = false,
-    .screen_setting_2 = false
+/* countdown */
+Countdown countdown = {
+	.minute = 0,
+	.second = 0,
+	.countdown_enable = false
 };
+/* stopwatch */
+Stopwatch stopwatch = {
+	.hour = 0,
+	.minute = 0,
+	.second = 0,
+	.stopwatch_enable = false
+};
+
+/* bool lap stopwatch */
+bool lapStopwatchFlag = false;
+
+/* ldr value get */
+uint32_t ldrValue = 0;
+uint32_t dutyCycle = 0;
+//static float s_ldr_filt = 0.0f;     // 滤波后的LDR
+//static int   s_inited   = 0;
+//static float s_duty     = DUTY_MIN; // 当前占空(0~100)
+float alpha = 0.000025;
+static float ema = 0;
+
+/* Alarm variables*/
+RTC_AlarmTypeDef sAlarm = {0};   // <-- single global definition
+
+volatile bool alarm_active = false;
+static uint32_t alarm_start_tick = 0;
+static uint32_t last_blink_tick = 0;
+static uint32_t last_beep_tick = 0;
 
 /* USER CODE END PV */
 
@@ -109,12 +137,12 @@ static void MX_RTC_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
+static void MX_ADC2_Init(void);
 /* USER CODE BEGIN PFP */
 extern void coast_asm_delay(uint32_t milliseconds);
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_RTC_Init(void);
 static void system_clock_setup(void);
+//static inline uint8_t LDR_to_Duty(uint16_t ldrValue);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -125,131 +153,369 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		/* B1 is pressed */
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0) {
 			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
-			switch (currentScreen) {
-			case HOME:
-				currentScreen = TIME;
-				break;
+			if (is_single_press[0] == true &&
+				is_double_press[0] == false &&
+				(decimal_second_count - button_double_press_time[0]) <= double_press_interval) {
+				is_double_press[0] = true;
+				is_single_press[0] = false;
+				is_holding[0] = false;
+
+			} else {
+				is_single_press[0] = true;
+				is_double_press[0] = false;
+				is_holding[0] = false;
 			}
-			check_double_press(0, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+
+			button_holding_time[0] = decimal_second_count;
 		}
 		/* B1 is released */
 		else {
 			stop_sound(htim1);
-			check_holding(0,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+
+			if ((decimal_second_count - button_holding_time[0]) >= holding_bound) {
+				is_holding[0] = true;
+				is_double_press[0] = false;
+				is_single_press[0] = false;
+			} else {
+				button_double_press_time[0] = decimal_second_count;
+			}
+			if (is_holding[0]) {
+				switch (currentScreen) {
+					case TIME:
+						switchTimeFormat();
+						break;
+					default:
+					}
+			} else if (is_single_press[0]) {
+				switch (currentScreen) {
+					case HOME:
+						currentScreen = TIME;
+						break;
+					case SETTINGS:
+						flash = !flash;
+						flash_state();
+						screenNeedsRefresh = true;
+						break;
+					case ALARM:
+						changeAlarmMin();
+						break;
+					case COUNTDOWN:
+						toggleCountdown(&countdown);
+						break;
+					case STOPWATCH:
+						toggleStopwatch(&stopwatch);
+						break;
+					default:
+				}
+			}
 		}
 	} else if (GPIO_Pin == SW1_Pin) {
 		/* The sw1 pin is pressed */
+
 		if (HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == 1) {
 			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
-			switch (currentScreen){
-				case ALARM:
-					currentScreen = TIME;
-					break;
+
+			if (is_single_press[1] == true &&
+				is_double_press[1] == false &&
+				(decimal_second_count - button_double_press_time[1]) <= double_press_interval) {
+				is_double_press[1] = true;
+				is_single_press[1] = false;
+				is_holding[1] = false;
+
+			} else {
+				is_single_press[1] = true;
+				is_double_press[1] = false;
+				is_holding[1] = false;
 			}
-			check_double_press(1, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+
+			button_holding_time[1] = decimal_second_count;
 		}
 		/* The sw1 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(1,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+
+			if ((decimal_second_count - button_holding_time[1]) >= holding_bound) {
+				is_holding[1] = true;
+				is_double_press[1] = false;
+				is_single_press[1] = false;
+			} else {
+				button_double_press_time[1] = decimal_second_count;
+			}
+			/* navigation */
+			if (is_holding[1]) {
+				switch (currentScreen){
+				//SW1 held, BACK for ALARM // no feature here thus far
+
+				}
+			} else if (is_single_press[1]) {
+				switch (currentScreen) {
+				case SETTINGS:
+					currentScreen = OPT;
+					break;
+				case OPT:
+					currentScreen = HOME;
+					break;
+				case TIME:
+					currentScreen = HOME;
+					break;
+				case ALARM:
+					currentScreen = TIME;
+					break;
+				case ALARM_SET:
+					currentScreen = ALARM;
+					break;
+				case FITNESS:
+					currentScreen = HOME;
+					break;
+				case COUNTDOWN:
+					currentScreen = FITNESS;
+					break;
+				case STOPWATCH:
+					currentScreen = FITNESS;
+					break;
+				}
+			}
 		}
 	} else if (GPIO_Pin == SW2_Pin) {
 		/* The sw2 pin is pressed */
+
 		if (HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == 1) {
 			/* sound indication */
 			if (enable_sound) {
-				button_sound = true;
+				generate_sound(460, 50, htim1);
 			}
+			if (enable_vibration) {
+				vibration_call(STEPS_PER_REV);
+			}
+
 			if (enable_vibration) {
 				button_vibration = true;
 			}
-			currentScreen = HOME;
-			check_double_press(2, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
-		}
 
+		    if (is_single_press[2] == true &&
+		        is_double_press[2] == false &&
+		        (decimal_second_count - button_double_press_time[2]) <= double_press_interval) {
+		        is_double_press[2] = true;
+		        is_single_press[2] = false;
+		        is_holding[2] = false;
+
+		    } else {
+		        is_single_press[2] = true;
+		        is_double_press[2] = false;
+		        is_holding[2] = false;
+		    }
+
+		    button_holding_time[2] = decimal_second_count;
+		}
 		/* The sw2 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(2,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+
+			if ((decimal_second_count - button_holding_time[2]) >= holding_bound) {
+				is_holding[2] = true;
+				is_double_press[2] = false;
+				is_single_press[2] = false;
+			} else {
+				button_double_press_time[2] = decimal_second_count;
+			}
+			if (is_holding[2] == true) {
+				switch (currentScreen){
+				//SW2 Held, HOME
+					case TIME:
+						currentScreen = HOME;
+						break;
+					case ALARM:
+						currentScreen = HOME;
+						break;
+					case ALARM_SET:
+						currentScreen = HOME;
+						break;
+					case SETTINGS:
+						currentScreen = HOME;
+						break;
+					case OPT:
+						currentScreen = HOME;
+						break;
+					default:
+						currentScreen = HOME;
+						break;
+				}
+			} else if (is_single_press[2]) {
+				switch (currentScreen) {
+				case ALARM:
+					currentScreen = ALARM_SET;  // request alarm set
+					break;
+				case HOME:
+					currentScreen = FITNESS;
+					break;
+				case FITNESS:
+					currentScreen = COUNTDOWN;
+					break;
+				case COUNTDOWN:
+					mintueCountdown(&countdown);
+					break;
+				case STOPWATCH:
+					lapStopwatchFlag = true;
+					break;
+				case SETTINGS:
+					enable_sound = !enable_sound;   // toggle first
+					screenNeedsRefresh = true;
+					break;
+				}
+			}
 		}
 	} else {
 		/* The sw3 pin is pressed */
 		if (HAL_GPIO_ReadPin(SW3_GPIO_Port, SW3_Pin) == 1) {
 			/* sound indication */
-			if (enable_sound) {
-				button_sound = true;
-			}
+			if (enable_sound) generate_sound(460, 50, htim1);
+
 			if (enable_vibration) {
-				button_vibration = true;
+				vibration_call(STEPS_PER_REV);
 			}
-			switch (currentScreen) {
-			case TIME:
-				currentScreen = ALARM;
-				break;
+			if (is_single_press[3] == true &&
+				is_double_press[3] == false &&
+				(decimal_second_count - button_double_press_time[3]) <= double_press_interval) {
+				is_double_press[3] = true;
+				is_single_press[3] = false;
+				is_holding[3] = false;
+
+			} else {
+				is_single_press[3] = true;
+				is_double_press[3] = false;
+				is_holding[3] = false;
 			}
-			check_double_press(3, is_single_press, is_double_press, is_holding,
-					decimal_second_count, double_press_interval,
-					button_double_press_time, button_holding_time);
+
+			button_holding_time[3] = decimal_second_count;
 		}
 		/* The sw3 pin is released */
 		else {
 			stop_sound(htim1);
-			check_holding(2,
-						  is_single_press,
-						  is_double_press,
-						  is_holding,
-						  decimal_second_count,
-						  holding_bound,
-						  button_double_press_time,
-						  button_holding_time);
+
+			if ((decimal_second_count - button_holding_time[3]) >= holding_bound) {
+				is_holding[3] = true;
+				is_double_press[3] = false;
+				is_single_press[3] = false;
+			} else {
+				button_double_press_time[3] = decimal_second_count;
+			}
+			if (is_holding[3]) {
+				switch(currentScreen) {
+				case COUNTDOWN:
+					resetCountdown(&countdown);
+					break;
+				case STOPWATCH:
+					resetStopwatch(&stopwatch);
+					break;
+				}
+			}
+			else if (is_double_press[3]) {
+				is_single_press[3] = false; // cancel single press
+				switch (currentScreen){
+					case ALARM:
+						switchAMPM();
+						break;
+				}
+			}
+			// Only act as single press if no double press
+			else if (is_single_press[3]) {
+				switch (currentScreen) {
+				case HOME:
+					previousScreen = currentScreen;
+					currentScreen = OPT;
+					break;
+				case OPT:
+					previousScreen = currentScreen;
+					currentScreen = SETTINGS;
+					break;
+				case SETTINGS:
+					enable_vibration = !enable_vibration;
+					if (enable_vibration) {
+						vibration_call(32);
+					} else {
+						vibration_stop();
+					}
+					screenNeedsRefresh = true;
+					break;
+				case TIME:
+					currentScreen = ALARM;
+					break;
+				case ALARM:
+					changeAlarmHour();
+					break;
+				case FITNESS:
+					currentScreen = STOPWATCH;
+					break;
+				case COUNTDOWN:
+					secondCountdown(&countdown);
+					break;
+				}
+			}
 		}
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim6) {
-		seconds++;
+		second++;
+	} else if (htim == &htim7) {
+
+		if (period_count >= 100) {
+			period_count = 0;
+			decimal_second_count++;
+		}
+		period_count++;
+		vibration_tick_1ms(); // vibration ticker
+
+		if (period_count == dutyCycle) {
+			HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED_D2_GPIO_Port, LED_D2_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+			HAL_GPIO_WritePin(GPIOB, SER_Data_IN_Pin, GPIO_PIN_RESET);
+			for (int i = 0; i < 16; i++) {
+				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
+		} else if (period_count == 0) {
+			HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(LED_D2_GPIO_Port, LED_D2_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+
+			HAL_GPIO_WritePin(GPIOB, SER_Data_IN_Pin, GPIO_PIN_SET);
+			for (int i = 0; i < 16; i++) {
+				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(SRCLK_GPIO_Port, SRCLK_Pin, GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
+		}
 	}
 }
+
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
+	alarm_active = true;
+	alarm_start_tick = HAL_GetTick();
+	last_blink_tick = alarm_start_tick;
+	last_beep_tick = alarm_start_tick;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -285,12 +551,14 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
   //timeDateInit();
   coast_lcd_init();
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -300,36 +568,73 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (button_sound) {
-		  /* frequency ： duration ：volume : htim1 */
-		  play_note(460, 150, 50, htim1);
-		  play_note(300, 50, 50, htim1);
-		  button_sound = false;
-	  } else {
-		  stop_sound(htim1);
+	  /* run the countdown and stopwatch if enabled */
+	  if (countdown.countdown_enable) {
+		  runCountdown(&countdown, &lastCountdownSecond, second, htim1, enable_sound, enable_vibration);
 	  }
-	  if (button_vibration) {
-		  generate_vibration();
-		  button_vibration = false;
+	  if (stopwatch.stopwatch_enable) {
+		  runStopwatch(&stopwatch, &lastStopwatchSecond, second);
 	  }
-	  if (currentScreen != previousScreen) {
-	  	LCD_SendCmd(LCD_CLEAR_DISPLAY);
-	  	coast_asm_delay(2);
+	  /* run the alarm if activated */
+	  if (alarm_active) {
+	      if (HAL_GetTick() - alarm_start_tick >= 5000) {
+	          alarm_active = false;
+	          HAL_GPIO_WritePin(LED_D3_GPIO_Port, LED_D3_Pin, GPIO_PIN_RESET);
+	          stop_sound(htim1);
+	      } else {
+	          if (HAL_GetTick() - last_beep_tick >= 500) {
+	              play_note(460, 100, 50, htim1);
+	              last_beep_tick = HAL_GetTick();
+	              vibration_call(32);
+	          }
+	      }
+	  }
 
-	  	switch (currentScreen) {
-	  		case HOME:
-	  			homePage(); // draw layout only
-	  			updateTime(1, 4);
-	  			break;
-	  		case TIME:
-	  			timePage();
-	  			updateTime(0, 4);
-	  			break;
-	  	}
-	  	previousScreen = currentScreen;
-	  	last_tick = HAL_GetTick();
+
+	  /* switch the page */
+	  if (currentScreen != previousScreen || timeFormatChanged || screenNeedsRefresh) {
+			LCD_SendCmd(LCD_CLEAR_DISPLAY);
+			coast_asm_delay(2);
+
+			switch (currentScreen) {
+				case HOME:
+					homePage(); // draw layout only
+					updateTime(1, 4);
+					break;
+				case TIME:
+					timePage();
+					updateTime(0, 4);
+					break;
+				case ALARM:
+					alarmPage();
+					updateAlarm(1, 0);
+					break;
+				case ALARM_SET:
+				    alarmConfirm();
+				    break;
+				case OPT:
+					OPTpage(ldrValue);
+					break;
+				case SETTINGS:
+					settingsPage();
+					break;
+				case FITNESS:
+					fitnessPage();
+					break;
+				case COUNTDOWN:
+					countdownPage(countdown);
+					break;
+				case STOPWATCH:
+					stopwatchPage(stopwatch);
+					break;
+			}
+			previousScreen = currentScreen;
+			screenNeedsRefresh = false;  // clear the flags
+			timeFormatChanged = false;  // clear the flag
+			last_tick = HAL_GetTick();
+
 	  }
-	    HAL_GPIO_WritePin(LED_D1_GPIO_Port, LED_D1_Pin, 1);
+
 	  /* UPDATE TIME EVERY SECOND ELAPSED */
 	  if ((HAL_GetTick() - last_tick) >= 1000) {
 	  	switch (currentScreen) {
@@ -339,9 +644,46 @@ int main(void)
 	  		case TIME:
 	  			updateTime(0, 4);  // row 0, col 6 (or wherever)
 	  			break;
+	  		case ALARM:
+	  			updateAlarm(1, 0);
+	  			break;
+	  		case FITNESS:
+	  			updateFitness();
+	  			break;
+	  		case COUNTDOWN:
+				updateCountdown(countdown);
+				break;
+			case STOPWATCH:
+				if (lapStopwatchFlag) {
+					lapStopwatch(stopwatch);
+					lapStopwatchFlag = false;
+				}
+				updateStopwatch(stopwatch);
+				break;
+			case OPT:
+				updateOpt(ldrValue);
+				break;
+	  		default:
+	  			break;
 	  	}
 	  	last_tick += 1000;
 	  }
+	  /* ldr */
+	  HAL_ADC_Start(&hadc2);
+	  HAL_ADC_PollForConversion(&hadc2, 1);
+	  ldrValue = HAL_ADC_GetValue(&hadc2);
+
+	  // Exponential Moving Average Filter
+	  ema = alpha * ldrValue + (1 - alpha) * ema;
+
+	  if (ema >= 600) {
+		  dutyCycle = 0;
+	  } else if (ema <= 100) {
+		  dutyCycle = 100;
+	  } else {
+		  dutyCycle = (600 - (uint32_t)ema) / 5;
+	  }
+
   }
   /* USER CODE END 3 */
 }
@@ -385,13 +727,72 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_TIM1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_TIM1
+                              |RCC_PERIPHCLK_ADC12;
+  PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+
+  /** Common config
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.LowPowerAutoWait = DISABLE;
+  hadc2.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* USER CODE END ADC2_Init 2 */
+
 }
 
 /**
@@ -471,6 +872,9 @@ static void MX_RTC_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
+
+  HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
 
   /* USER CODE END RTC_Init 2 */
 
@@ -746,6 +1150,37 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//static inline uint8_t LDR_to_Duty(uint16_t ldrValue)
+//{
+//    // 1) 一阶IIR低通：y += a*(x - y)
+//    float x = (float)ldrValue;
+//    if (!s_inited) { s_ldr_filt = x; s_inited = 1; }
+//    else           { s_ldr_filt += ALPHA * (x - s_ldr_filt); }
+//
+//    // 2) 归一化并映射到 duty 范围
+//    float norm = s_ldr_filt / ADC_MAX;
+//    if (norm < 0) norm = 0; if (norm > 1) norm = 1;
+//
+//    float duty_target;
+//#if INVERT
+//    duty_target = DUTY_MAX - norm * (DUTY_MAX - DUTY_MIN);
+//#else
+//    duty_target = DUTY_MIN + norm * (DUTY_MAX - DUTY_MIN);
+//#endif
+//
+//    // 3) 限速（slew rate）
+//    float diff = duty_target - s_duty;
+//    if      (diff >  SLEW_STEP) s_duty += SLEW_STEP;
+//    else if (diff < -SLEW_STEP) s_duty -= SLEW_STEP;
+//    else                        s_duty  = duty_target;
+//
+//    // 4) 限幅到 0..100 再返回 uint8_t
+//    if (s_duty < 0.f)    s_duty = 0.f;
+//    if (s_duty > 100.f)  s_duty = 100.f;
+//
+//    return (uint8_t)(s_duty + 0.5f); // 四舍五入为 0..100
+//}
+
 void system_clock_setup() {
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};

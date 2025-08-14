@@ -1,0 +1,15 @@
+../Core/Src/fitness.c:20:6:fitnessPage	32	static
+../Core/Src/fitness.c:45:6:updateFitness	32	static
+../Core/Src/fitness.c:68:6:countdownPage	48	static
+../Core/Src/fitness.c:77:6:toggleCountdown	16	static
+../Core/Src/fitness.c:84:6:mintueCountdown	16	static
+../Core/Src/fitness.c:92:6:secondCountdown	16	static
+../Core/Src/fitness.c:99:6:updateCountdown	48	static
+../Core/Src/fitness.c:105:6:resetCountdown	16	static
+../Core/Src/fitness.c:111:6:runCountdown	104	static
+../Core/Src/fitness.c:155:6:stopwatchPage	56	static
+../Core/Src/fitness.c:166:6:lapStopwatch	56	static
+../Core/Src/fitness.c:176:6:resetStopwatch	16	static
+../Core/Src/fitness.c:181:6:toggleStopwatch	16	static
+../Core/Src/fitness.c:189:6:updateStopwatch	56	static
+../Core/Src/fitness.c:195:6:runStopwatch	24	static
