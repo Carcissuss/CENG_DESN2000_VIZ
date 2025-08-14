@@ -42,6 +42,59 @@ void timePage() {
 
 }
 
+void timeSetPage() {
+	char buff[20];
+	LCD_SendCmd(LCD_CLEAR_DISPLAY);
+
+	LCD_SendCmd(0x80);
+	LCD_SendStr("Set Time to:");
+
+	LCD_SendCmd(LCD_SECOND_LINE);
+	uint8_t h = sTime.Hours;
+	uint8_t m = sTime.Minutes;
+
+	if (is_24_hour_format) {
+		snprintf(buff, sizeof(buff), "%02d:%02d", h, m);
+	} else {
+		const char *ampm = (h >= 12) ? "P.M" : "A.M";
+		uint8_t dh = h % 12;
+		if (dh == 0) dh = 12;
+		snprintf(buff, sizeof(buff), "%02d:%02d %s", dh, m, ampm);
+	}
+	LCD_SendStr(buff);
+}
+
+void timeSetConfirm() {
+	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+	LCD_SendCmd(LCD_CLEAR_DISPLAY);   // clear display for confirmation
+	coast_asm_delay(2);
+
+	LCD_SendStr("TIME SET TO:");    // top line
+	LCD_SendCmd(LCD_SECOND_LINE);
+	char buffer[16];
+	snprintf(buffer, sizeof(buffer), "%02d:%02d", sTime.Hours, sTime.Minutes);
+	LCD_SendStr(buffer);
+}
+
+void updateSetTime(uint8_t row, uint8_t col) {
+	char buff[16];
+	uint8_t h = sTime.Hours;
+	uint8_t m = sTime.Minutes;
+
+	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0;
+	LCD_SendCmd(baseCmd + col);
+
+	if (is_24_hour_format) {
+		snprintf(buff, sizeof(buff), "%02d:%02d", h, m);
+	} else {
+		const char *ampm = (h >= 12) ? "P.M" : "A.M";
+		uint8_t dh = h % 12; if (dh == 0) dh = 12;
+		snprintf(buff, sizeof(buff), "%02d:%02d %s", dh, m, ampm);
+	}
+		LCD_SendStr(buff);
+}
+
 void updateTime(uint8_t row, uint8_t col) {
 	char buff[8];
 	char dateBuff[8];
@@ -67,13 +120,14 @@ void updateTime(uint8_t row, uint8_t col) {
 	uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0; // LCD_LINE1 or LCD_LINE2
 	LCD_SendCmd(baseCmd + col);
 
-	sprintf(buff, "%02d:%02d ", displayHour, minutes);
-	LCD_SendStr(buff);
-
 	sprintf(dateBuff, " %02d/%02d", day, month);
 	LCD_SendStr(dateBuff);
-}
 
+	sprintf(buff, " %02d:%02d", displayHour, minutes);
+	LCD_SendStr(buff);
+
+
+}
 
 void alarmPage() {
 	char buff[20];
@@ -130,7 +184,17 @@ void switchAMPM(){
 	    } else {
 	        sAlarm.AlarmTime.Hours = h + 12; // AM -> PM
 	    }
+}
 
+void switchTimeAMPM(){
+
+	if (is_24_hour_format) return;
+	uint8_t h = sTime.Hours; // 0..23
+	    if (h >= 12) {
+	        sTime.Hours = h - 12; // PM -> AM
+	    } else {
+	        sTime.Hours = h + 12; // AM -> PM
+	    }
 }
 
 void changeAlarmHour() {
@@ -145,6 +209,23 @@ void changeAlarmMin() {
 	m = (m + 5) % 60;
 	sAlarm.AlarmTime.Minutes = m;
 
+}
+
+void changeTimeHour() {
+	uint8_t h = sTime.Hours;
+	h = (h + 1) % 24;
+	sTime.Hours = h;
+}
+
+void changeTimeMin(int interval) {
+	uint8_t m = sTime.Minutes;
+	if (interval == 5) {
+		m = (m + 5) % 60;
+	} else {
+		m = (m + 1) % 60;
+	}
+
+	sTime.Minutes = m;
 }
 
 void alarmConfirm(void) {

@@ -11,6 +11,8 @@ typedef enum {
 	NONE,
     HOME,
     TIME,
+	CUSTOM_TIME,
+	TIME_SET,
     ALARM,
 	ALARM_SET,
 	FITNESS,

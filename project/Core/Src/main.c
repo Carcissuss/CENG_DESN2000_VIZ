@@ -98,25 +98,6 @@ bool enable_time_update = false;
 /* flashlight feature */
 volatile bool flash = false;
 
-/* screen navigation */
-typedef struct {
-	bool screen_homepage;
-	bool screen_countdown;
-	bool screen_stopwatch;
-	bool screen_alarm;
-	bool screen_setting_1;
-	bool screen_setting_2;
-}Navigation;
-
-Navigation screen = {
-    .screen_homepage = true,
-    .screen_countdown = false,
-    .screen_stopwatch = false,
-    .screen_alarm = false,
-    .screen_setting_1 = false,
-    .screen_setting_2 = false
-};
-
 /* countdown */
 Countdown countdown = {
 	.minute = 0,
@@ -216,7 +197,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						break;
 					default:
 					}
-			} else if (is_single_press[0]) {
+			} else if (is_double_press[0]) {
+				switch (currentScreen) {
+					case CUSTOM_TIME:
+						changeTimeMin(4);
+						break;
+				}
+
+			} else if (is_single_press[0] && !is_double_press[0]) {
 				switch (currentScreen) {
 					case HOME:
 						currentScreen = TIME;
@@ -225,6 +213,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						flash = !flash;
 						flash_state();
 						screenNeedsRefresh = true;
+						break;
+					case CUSTOM_TIME:
+						changeTimeMin(1);
 						break;
 					case ALARM:
 						changeAlarmMin();
@@ -282,7 +273,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				//SW1 held, BACK for ALARM // no feature here thus far
 
 				}
-			} else if (is_single_press[1]) {
+			} else if (is_single_press[1] && !is_double_press[1]) {
 				switch (currentScreen) {
 					case SETTINGS:
 						currentScreen = OPT;
@@ -292,6 +283,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						break;
 					case TIME:
 						currentScreen = HOME;
+						break;
+					case CUSTOM_TIME:
+						currentScreen = TIME;
+						break;
+					case TIME_SET:
+						currentScreen = CUSTOM_TIME;
 						break;
 					case ALARM:
 						currentScreen = TIME;
@@ -356,27 +353,18 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			if (is_holding[2] == true) {
 				switch (currentScreen){
 				//SW2 Held, HOME
-					case TIME:
-						currentScreen = HOME;
-						break;
-					case ALARM:
-						currentScreen = HOME;
-						break;
-					case ALARM_SET:
-						currentScreen = HOME;
-						break;
-					case SETTINGS:
-						currentScreen = HOME;
-						break;
-					case OPT:
-						currentScreen = HOME;
-						break;
 					default:
 						currentScreen = HOME;
 						break;
 				}
-			} else if (is_single_press[2]) {
+			} else if (is_single_press[2] && !is_double_press[2]) {
 				switch (currentScreen) {
+					case TIME:
+						currentScreen = CUSTOM_TIME;
+						break;
+					case CUSTOM_TIME:
+						currentScreen = TIME_SET;
+						break;
 					case ALARM:
 						currentScreen = ALARM_SET;  // request alarm set
 						break;
@@ -450,10 +438,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 					case ALARM:
 						switchAMPM();
 						break;
+					case CUSTOM_TIME:
+						switchTimeAMPM();
+						break;
 				}
 			}
 			// Only act as single press if no double press
-			else if (is_single_press[3]) {
+			else if (is_single_press[3] && !is_double_press[3]) {
 				switch (currentScreen) {
 					case HOME:
 						previousScreen = currentScreen;
@@ -474,6 +465,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						break;
 					case TIME:
 						currentScreen = ALARM;
+						break;
+					case CUSTOM_TIME:
+						changeTimeHour();
 						break;
 					case ALARM:
 						changeAlarmHour();
@@ -609,7 +603,9 @@ int main(void)
 	      } else {
 	          if (HAL_GetTick() - last_beep_tick >= 500) {
 	              play_note(460, 100, 50, htim1);
-	              vibration_call(32);
+	              if (enable_vibration) {
+	            	  vibration_call(32);
+	              }
 	              flash_on();
 	              last_beep_tick = HAL_GetTick();
 	          }
@@ -628,6 +624,13 @@ int main(void)
 				case TIME:
 					timePage();
 					updateTime(0, 4);
+					break;
+				case CUSTOM_TIME:
+					timeSetPage();
+					updateSetTime(1, 0);
+					break;
+				case TIME_SET:
+					timeSetConfirm();
 					break;
 				case ALARM:
 					alarmPage();
@@ -669,6 +672,9 @@ int main(void)
 	  			break;
 	  		case TIME:
 	  			updateTime(0, 4);  // row 0, col 6 (or wherever)
+	  			break;
+	  		case CUSTOM_TIME:
+	  			updateSetTime(1, 0);
 	  			break;
 	  		case ALARM:
 	  			updateAlarm(1, 0);

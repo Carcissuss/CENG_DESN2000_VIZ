@@ -38,7 +38,11 @@ void fitnessPage() {
 	sprintf(buffer, "%02d:%02d", displayHour, minutes);
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 	LCD_SendStr("Fitness:");
+	LCD_SendStr(" 150 BPM");
 	LCD_SendCmd(LCD_SECOND_LINE);
+	uint8_t baseCmd = (0) ? 0x80 : 0xC0;
+	LCD_SendCmd(baseCmd + 7);  // position cursor
+	LCD_SendStr(" 3400 STP");
 	LCD_SendStr(buffer);
 }
 
