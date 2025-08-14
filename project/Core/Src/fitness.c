@@ -42,27 +42,30 @@ void fitnessPage() {
 	LCD_SendStr(buffer);
 }
 
-void updateFitness() {
-	char buffer[16];
+void updateFitness(uint8_t row, uint8_t col) {
+    char buffer[16];
 
-	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+    HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-	uint8_t hours = sTime.Hours;
-	uint8_t minutes = sTime.Minutes;
+    uint8_t hours = sTime.Hours;
+    uint8_t minutes = sTime.Minutes;
 
-	uint8_t displayHour = hours;
-	if (!is_24_hour_format) {
-		if (hours == 0) {
-			displayHour = 12;
-		}
-		else if (hours > 12) {
-			displayHour = hours - 12;
-		}
-	}
+    uint8_t displayHour = hours;
+    if (!is_24_hour_format) {
+        if (hours == 0) {
+            displayHour = 12;
+        }
+        else if (hours > 12) {
+            displayHour = hours - 12;
+        }
+    }
 
-	sprintf(buffer, "%02d:%02d", displayHour, minutes);
-	LCD_SendCmd(LCD_SECOND_LINE);
-	LCD_SendStr(buffer);
+    uint8_t baseCmd = (row == 0) ? 0x80 : 0xC0;
+    LCD_SendCmd(baseCmd + col);  // position cursor
+
+    sprintf(buffer, "%02d:%02d", displayHour, minutes);
+    LCD_SendStr(buffer);         // print at given row/col
 }
 
 void countdownPage(Countdown countdown) {
@@ -124,11 +127,6 @@ void runCountdown(Countdown *countdown, uint32_t *lastSecond, uint32_t second,
 	}
 	if (countdown->second == 0 && countdown->minute == 0) {
 		countdown->countdown_enable = false;
-		if (enable_vibration) {
-			vibration_call(STEPS_PER_REV);
-			vibration_call(STEPS_PER_REV);
-		}
-
 		if (enable_sound) {
 			play_note(460, 300, 50, htim1);
 			play_note(0, 50, 50, htim1);
@@ -143,7 +141,7 @@ void runCountdown(Countdown *countdown, uint32_t *lastSecond, uint32_t second,
 			play_note(220, 300, 50, htim1);
 			play_note(0, 50, 50, htim1);
 		}
-
+		if (enable_vibration) {vibration_call(STEPS_PER_REV);}
 		LCD_SendCmd(LCD_CLEAR_DISPLAY);
 		LCD_SendStr("Countdown Done");
 		stop_sound(htim1);

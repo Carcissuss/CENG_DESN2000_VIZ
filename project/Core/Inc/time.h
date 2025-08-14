@@ -1,3 +1,10 @@
+/*
+ * time.h
+ *
+ *  Created on: Aug 4, 2025
+ *      Author: Vageesh Jha
+ */
+
 #include "main.h"
 void timePage();
 void alarmPage();

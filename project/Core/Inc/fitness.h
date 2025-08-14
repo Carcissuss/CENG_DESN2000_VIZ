@@ -28,7 +28,7 @@ extern void coast_asm_delay(uint32_t milliseconds);
 
 /* fitness page display functions */
 void fitnessPage();
-void updateFitness();
+void updateFitness(uint8_t row, uint8_t col);
 
 /* declaration of countdown functions */
 void countdownPage(Countdown countdown);

@@ -1,4 +1,9 @@
-
+/*
+ * coast.c
+ *
+ *  Created on: Aug 4, 2025
+ *      Author: Vageesh Jha
+ */
 #include <stdio.h>
 #include <stdbool.h>
 #include "main.h"
@@ -24,6 +29,7 @@ void homePage() {
 
 	LCD_SendStr("OPT ");
 }
+
 
 void OPTpage(uint32_t ldrValue) {
 	char buffer[16];

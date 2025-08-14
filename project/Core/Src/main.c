@@ -58,13 +58,16 @@ TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
+ADC_HandleTypeDef hadc2;
 
 uint32_t last_tick = 0;
-uint32_t second = 0;
+uint32_t seconds = 0;
 uint32_t period_count = 0;
+
 uint32_t millisecond = 0;
 uint32_t lastCountdownSecond = 0;
 uint32_t lastStopwatchSecond = 0;
+
 uint32_t decimal_second_count = 0;
 uint32_t button_double_press_time[4] = {0, 0, 0, 0};
 uint32_t button_holding_time[4] = {0, 0, 0, 0};
@@ -95,6 +98,25 @@ bool enable_time_update = false;
 /* flashlight feature */
 volatile bool flash = false;
 
+/* screen navigation */
+typedef struct {
+	bool screen_homepage;
+	bool screen_countdown;
+	bool screen_stopwatch;
+	bool screen_alarm;
+	bool screen_setting_1;
+	bool screen_setting_2;
+}Navigation;
+
+Navigation screen = {
+    .screen_homepage = true,
+    .screen_countdown = false,
+    .screen_stopwatch = false,
+    .screen_alarm = false,
+    .screen_setting_1 = false,
+    .screen_setting_2 = false
+};
+
 /* countdown */
 Countdown countdown = {
 	.minute = 0,
@@ -109,6 +131,7 @@ Stopwatch stopwatch = {
 	.stopwatch_enable = false
 };
 
+
 /* bool lap stopwatch */
 bool lapStopwatchFlag = false;
 
@@ -121,6 +144,7 @@ uint32_t dutyCycle = 0;
 //static float s_duty     = DUTY_MIN; // 当前占空(0~100)
 float alpha = 0.000025;
 static float ema = 0;
+
 
 /* Alarm variables*/
 RTC_AlarmTypeDef sAlarm = {0};   // <-- single global definition
@@ -144,7 +168,6 @@ static void MX_ADC2_Init(void);
 extern void coast_asm_delay(uint32_t milliseconds);
 void SystemClock_Config(void);
 static void system_clock_setup(void);
-//static inline uint8_t LDR_to_Duty(uint16_t ldrValue);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -261,30 +284,30 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				}
 			} else if (is_single_press[1]) {
 				switch (currentScreen) {
-				case SETTINGS:
-					currentScreen = OPT;
-					break;
-				case OPT:
-					currentScreen = HOME;
-					break;
-				case TIME:
-					currentScreen = HOME;
-					break;
-				case ALARM:
-					currentScreen = TIME;
-					break;
-				case ALARM_SET:
-					currentScreen = ALARM;
-					break;
-				case FITNESS:
-					currentScreen = HOME;
-					break;
-				case COUNTDOWN:
-					currentScreen = FITNESS;
-					break;
-				case STOPWATCH:
-					currentScreen = FITNESS;
-					break;
+					case SETTINGS:
+						currentScreen = OPT;
+						break;
+					case OPT:
+						currentScreen = HOME;
+						break;
+					case TIME:
+						currentScreen = HOME;
+						break;
+					case ALARM:
+						currentScreen = TIME;
+						break;
+					case ALARM_SET:
+						currentScreen = ALARM;
+						break;
+					case FITNESS:
+						currentScreen = HOME;
+						break;
+					case COUNTDOWN:
+						currentScreen = FITNESS;
+						break;
+					case STOPWATCH:
+						currentScreen = FITNESS;
+						break;
 				}
 			}
 		}
@@ -354,26 +377,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				}
 			} else if (is_single_press[2]) {
 				switch (currentScreen) {
-				case ALARM:
-					currentScreen = ALARM_SET;  // request alarm set
-					break;
-				case HOME:
-					currentScreen = FITNESS;
-					break;
-				case FITNESS:
-					currentScreen = COUNTDOWN;
-					break;
-				case COUNTDOWN:
-					mintueCountdown(&countdown);
-					break;
-				case STOPWATCH:
-					lapStopwatchFlag = true;
-					break;
-				case SETTINGS:
-					enable_sound = !enable_sound;   // toggle first
-					screenNeedsRefresh = true;
-					break;
-				}
+					case ALARM:
+						currentScreen = ALARM_SET;  // request alarm set
+						break;
+					case HOME:
+						currentScreen = FITNESS;
+						break;
+					case FITNESS:
+						currentScreen = COUNTDOWN;
+						break;
+					case COUNTDOWN:
+						mintueCountdown(&countdown);
+						break;
+					case STOPWATCH:
+						lapStopwatchFlag = true;
+						break;
+					case SETTINGS:
+						enable_sound = !enable_sound;   // toggle first
+						screenNeedsRefresh = true;
+						break;
+				    }
 			}
 		}
 	} else {
@@ -413,15 +436,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			}
 			if (is_holding[3]) {
 				switch(currentScreen) {
-				case COUNTDOWN:
-					resetCountdown(&countdown);
-					break;
-				case STOPWATCH:
-					resetStopwatch(&stopwatch);
-					break;
+					case COUNTDOWN:
+						resetCountdown(&countdown);
+						break;
+					case STOPWATCH:
+						resetStopwatch(&stopwatch);
+						break;
 				}
 			}
-			else if (is_double_press[3]) {
+			if (is_double_press[3]) {
 				is_single_press[3] = false; // cancel single press
 				switch (currentScreen){
 					case ALARM:
@@ -432,35 +455,35 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			// Only act as single press if no double press
 			else if (is_single_press[3]) {
 				switch (currentScreen) {
-				case HOME:
-					previousScreen = currentScreen;
-					currentScreen = OPT;
-					break;
-				case OPT:
-					previousScreen = currentScreen;
-					currentScreen = SETTINGS;
-					break;
-				case SETTINGS:
-					enable_vibration = !enable_vibration;
-					if (enable_vibration) {
-						vibration_call(32);
-					} else {
-						vibration_stop();
-					}
-					screenNeedsRefresh = true;
-					break;
-				case TIME:
-					currentScreen = ALARM;
-					break;
-				case ALARM:
-					changeAlarmHour();
-					break;
-				case FITNESS:
-					currentScreen = STOPWATCH;
-					break;
-				case COUNTDOWN:
-					secondCountdown(&countdown);
-					break;
+					case HOME:
+						previousScreen = currentScreen;
+						currentScreen = OPT;
+						break;
+					case OPT:
+						previousScreen = currentScreen;
+						currentScreen = SETTINGS;
+						break;
+					case SETTINGS:
+						enable_vibration = !enable_vibration;
+						if (enable_vibration) {
+							vibration_call(32);
+						} else {
+							vibration_stop();
+						}
+						screenNeedsRefresh = true;
+						break;
+					case TIME:
+						currentScreen = ALARM;
+						break;
+					case ALARM:
+						changeAlarmHour();
+						break;
+					case FITNESS:
+						currentScreen = STOPWATCH;
+						break;
+					case COUNTDOWN:
+						secondCountdown(&countdown);
+						break;
 				}
 			}
 		}
@@ -469,20 +492,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim6) {
-		second++;
+		seconds++;
 	} else if (htim == &htim7) {
-		/* count every 0.1 second */
-		if (millisecond == 100) {
-			decimal_second_count++;
-			millisecond = 0;
-		} else {
-			millisecond++;
-		}
-		/* ldr change ambient light frequency counting */
-		if (period_count = 100) {
+		period_count++;
+		if (period_count >= 100) {
 			period_count = 0;
-		} else {
-			period_count++;
+			decimal_second_count++;
 		}
 		vibration_tick_1ms(); // vibration ticker
 		if (!flash) {
@@ -565,7 +580,6 @@ int main(void)
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
-  //timeDateInit();
   coast_lcd_init();
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
@@ -579,14 +593,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  /* run the countdown and stopwatch if enabled */
 	  if (countdown.countdown_enable) {
-		  runCountdown(&countdown, &lastCountdownSecond, second, htim1, enable_sound, enable_vibration);
-	  }
+	  	  runCountdown(&countdown, &lastCountdownSecond, seconds, htim1, enable_sound, enable_vibration);
+	  	  }
 	  if (stopwatch.stopwatch_enable) {
-		  runStopwatch(&stopwatch, &lastStopwatchSecond, second);
+		  runStopwatch(&stopwatch, &lastStopwatchSecond, seconds);
 	  }
-	  /* run the alarm if activated */
+
+	  // Rings, Vibrates and Flashes for 5 seconds
 	  if (alarm_active) {
 	      if (HAL_GetTick() - alarm_start_tick >= 5000) {
 	          alarm_active = false;
@@ -595,14 +609,13 @@ int main(void)
 	      } else {
 	          if (HAL_GetTick() - last_beep_tick >= 500) {
 	              play_note(460, 100, 50, htim1);
-	              last_beep_tick = HAL_GetTick();
 	              vibration_call(32);
+	              flash_on();
+	              last_beep_tick = HAL_GetTick();
 	          }
 	      }
 	  }
 
-
-	  /* switch the page */
 	  if (currentScreen != previousScreen || timeFormatChanged || screenNeedsRefresh) {
 			LCD_SendCmd(LCD_CLEAR_DISPLAY);
 			coast_asm_delay(2);
@@ -631,6 +644,7 @@ int main(void)
 					break;
 				case FITNESS:
 					fitnessPage();
+					updateFitness(1, 0);
 					break;
 				case COUNTDOWN:
 					countdownPage(countdown);
@@ -638,6 +652,7 @@ int main(void)
 				case STOPWATCH:
 					stopwatchPage(stopwatch);
 					break;
+
 			}
 			previousScreen = currentScreen;
 			screenNeedsRefresh = false;  // clear the flags
@@ -659,8 +674,8 @@ int main(void)
 	  			updateAlarm(1, 0);
 	  			break;
 	  		case FITNESS:
-	  			updateFitness();
-	  			break;
+	  			 updateFitness(1, 0);
+	  			 break;
 	  		case COUNTDOWN:
 				updateCountdown(countdown);
 				break;
@@ -820,7 +835,6 @@ static void MX_RTC_Init(void)
 
   RTC_TimeTypeDef sTime = {0};
   RTC_DateTypeDef sDate = {0};
-  RTC_AlarmTypeDef sAlarm = {0};
 
   /* USER CODE BEGIN RTC_Init 1 */
 
@@ -1161,7 +1175,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
 void system_clock_setup() {
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};

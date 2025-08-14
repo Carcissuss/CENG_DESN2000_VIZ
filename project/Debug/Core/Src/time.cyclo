@@ -1,9 +1,9 @@
-../Core/Src/time.c:14:6:timePage	2
-../Core/Src/time.c:41:6:updateTime	5
-../Core/Src/time.c:73:6:switchTimeFormat	1
+../Core/Src/time.c:18:6:timePage	2
+../Core/Src/time.c:45:6:updateTime	5
 ../Core/Src/time.c:78:6:alarmPage	4
-../Core/Src/time.c:101:6:updateAlarm	5
-../Core/Src/time.c:120:6:switchAMPM	3
-../Core/Src/time.c:132:6:changeAlarmHour	1
-../Core/Src/time.c:139:6:changeAlarmMin	1
-../Core/Src/time.c:146:6:alarmConfirm	1
+../Core/Src/time.c:100:6:updateAlarm	5
+../Core/Src/time.c:119:6:switchTimeFormat	1
+../Core/Src/time.c:124:6:switchAMPM	3
+../Core/Src/time.c:136:6:changeAlarmHour	1
+../Core/Src/time.c:143:6:changeAlarmMin	1
+../Core/Src/time.c:150:6:alarmConfirm	1

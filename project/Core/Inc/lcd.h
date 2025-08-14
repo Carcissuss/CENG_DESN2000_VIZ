@@ -1,5 +1,5 @@
-#include "main.h"
 
+#include "main.h"
 
 void coast_lcd_init();
 void LCD_Pulse();

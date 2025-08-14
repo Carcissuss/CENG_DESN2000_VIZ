@@ -1,4 +1,9 @@
-
+/*
+ * time.c
+ *
+ *  Created on: Aug 4, 2025
+ *      Author: Vageesh Jha
+ */
 #include <stdio.h>
 #include "main.h"
 #include "coast.h"
@@ -9,7 +14,6 @@ extern RTC_AlarmTypeDef sAlarm;
 
 bool is_24_hour_format = true;
 extern bool timeFormatChanged;
-extern void coast_asm_delay(uint32_t milliseconds);
 
 void timePage() {
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
@@ -70,15 +74,10 @@ void updateTime(uint8_t row, uint8_t col) {
 	LCD_SendStr(dateBuff);
 }
 
-void switchTimeFormat() {
-    is_24_hour_format = !is_24_hour_format;
-    timeFormatChanged = true;
-}
 
 void alarmPage() {
 	char buff[20];
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
-//	coast_asm_delay(2);
 
 	LCD_SendCmd(0x80);
 	LCD_SendStr("Set Alarm for:");
@@ -115,6 +114,11 @@ void updateAlarm(uint8_t row, uint8_t col) {
 		snprintf(buff, sizeof(buff), "%02d:%02d %s", dh, m, ampm);
 	}
 	LCD_SendStr(buff);
+}
+
+void switchTimeFormat() {
+    is_24_hour_format = !is_24_hour_format;
+    timeFormatChanged = true;
 }
 
 void switchAMPM(){

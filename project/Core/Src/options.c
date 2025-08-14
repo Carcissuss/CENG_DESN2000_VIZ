@@ -6,7 +6,6 @@
  */
 
 #include <stdio.h>
-#include <stdbool.h>
 #include "main.h"
 #include "coast.h"
 #include "lcd.h"
@@ -20,7 +19,6 @@ void settingsPage() {
 
 	LCD_SendStr("SOUND:");
 	LCD_SendStr(enable_sound ? "ON " : "OFF");
-
 
 	LCD_SendCmd(LCD_SECOND_LINE); // Move to second line
 
@@ -54,7 +52,7 @@ void flash_on(void) {
     HAL_GPIO_WritePin(LED_D1_GPIO_Port,   LED_D1_Pin,   GPIO_PIN_SET);
     HAL_GPIO_WritePin(LED_D2_GPIO_Port,   LED_D2_Pin,   GPIO_PIN_SET);
     HAL_GPIO_WritePin(LED_D3_GPIO_Port,   LED_D3_Pin,   GPIO_PIN_SET);
-    HAL_GPIO_WritePin(LED_D4_GPIO_Port,   LED_D4_Pin,   GPIO_PIN_SET); // D4 on this board
+    HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET); // D4 on this board
     HAL_GPIO_WritePin(LD2_GPIO_Port,      LD2_Pin,      GPIO_PIN_SET);
 
     // led bar (D5–D20) all ON
@@ -65,8 +63,9 @@ void flash_off(void) {
     HAL_GPIO_WritePin(LED_D1_GPIO_Port,   LED_D1_Pin,   GPIO_PIN_RESET);
     HAL_GPIO_WritePin(LED_D2_GPIO_Port,   LED_D2_Pin,   GPIO_PIN_RESET);
     HAL_GPIO_WritePin(LED_D3_GPIO_Port,   LED_D3_Pin,   GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(LED_D4_GPIO_Port,   LED_D4_Pin,   GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(LD2_GPIO_Port,      LD2_Pin,      GPIO_PIN_RESET);
+
     // D5–D20 all OFF
     switchLedBar(0x0000);
 }
