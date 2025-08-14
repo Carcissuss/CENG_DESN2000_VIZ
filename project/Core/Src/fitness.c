@@ -17,6 +17,7 @@ extern void coast_asm_delay(uint32_t milliseconds);
 
 extern bool is_24_hour_format;
 
+/* display the fitness information on LCD when enter the page */
 void fitnessPage() {
 	char buffer[16];
 
@@ -46,6 +47,7 @@ void fitnessPage() {
 	LCD_SendStr(buffer);
 }
 
+/* update the fitness information on LCD every second */
 void updateFitness(uint8_t row, uint8_t col) {
     char buffer[16];
 
@@ -72,6 +74,7 @@ void updateFitness(uint8_t row, uint8_t col) {
     LCD_SendStr(buffer);         // print at given row/col
 }
 
+/* display the countdown information when enter the page */
 void countdownPage(Countdown countdown) {
 	char buffer[16];
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
@@ -81,6 +84,7 @@ void countdownPage(Countdown countdown) {
 	LCD_SendStr(buffer);
 }
 
+/* enable/disable the countdown */
 void toggleCountdown(Countdown *countdown) {
 	if (countdown->countdown_enable) {
 		countdown->countdown_enable = false;
@@ -88,6 +92,8 @@ void toggleCountdown(Countdown *countdown) {
 		countdown->countdown_enable = true;
 	}
 }
+
+/* add the countdown minute by one */
 void mintueCountdown(Countdown *countdown) {
 	if (countdown->minute >= 60) {
 		countdown->minute = 60;
@@ -96,6 +102,7 @@ void mintueCountdown(Countdown *countdown) {
 	}
 }
 
+/* add the countdown second by one */
 void secondCountdown(Countdown *countdown) {
 	if (countdown->second >= 60) {
 		countdown->second = 60;
@@ -103,18 +110,23 @@ void secondCountdown(Countdown *countdown) {
 		(countdown->second)++;
 	}
 }
+
+/* update the countdown display on LCD every second */
 void updateCountdown(Countdown countdown) {
 	char buffer[16];
 	LCD_SendCmd(LCD_SECOND_LINE);
 	snprintf(buffer, sizeof(buffer), "%02ld:%02ld", countdown.minute, countdown.second);
 	LCD_SendStr(buffer);
 }
+
+/* reset all values of countdown to zero and disable the countdown */
 void resetCountdown(Countdown *countdown) {
 	countdown->minute = 0;
 	countdown->second = 0;
 	countdown->countdown_enable = false;
 }
 
+/* update the countdown value every second when the countdown is enabled */
 void runCountdown(Countdown *countdown, uint32_t *lastSecond, uint32_t second,
 			TIM_HandleTypeDef htim1, bool enable_sound, bool enable_vibration) {
 	if (*lastSecond >= second) {
@@ -156,6 +168,7 @@ void runCountdown(Countdown *countdown, uint32_t *lastSecond, uint32_t second,
 	*lastSecond = second;
 }
 
+/* display the stopwatch page when first enter the page */
 void stopwatchPage(Stopwatch stopwatch) {
 	char buffer[16];
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
@@ -166,7 +179,7 @@ void stopwatchPage(Stopwatch stopwatch) {
 	LCD_SendStr(buffer);
 }
 
-
+/* record the current stopwatch value and display on the LCD Row 1 */
 void lapStopwatch(Stopwatch stopwatch) {
 	char buffer[16];
 	coast_asm_delay(11);
@@ -177,11 +190,14 @@ void lapStopwatch(Stopwatch stopwatch) {
 	LCD_SendStr(buffer);
 }
 
+/* reset the stopwatch values to zero and disable it */
 void resetStopwatch(Stopwatch *stopwatch) {
 	stopwatch->minute = 0;
 	stopwatch->second = 0;
 	stopwatch->stopwatch_enable = false;
 }
+
+/* enable/disable the stopwatch */
 void toggleStopwatch(Stopwatch *stopwatch) {
 	if (stopwatch->stopwatch_enable) {
 		stopwatch->stopwatch_enable = false;
@@ -190,12 +206,15 @@ void toggleStopwatch(Stopwatch *stopwatch) {
 	}
 }
 
+/* update the stopwatch value every second on LCD */
 void updateStopwatch(Stopwatch stopwatch) {
 	char buffer[16];
 	LCD_SendCmd(LCD_SECOND_LINE);
 	snprintf(buffer, sizeof(buffer), "%02ld:%02ld:%02ld", stopwatch.hour, stopwatch.minute, stopwatch.second);
 	LCD_SendStr(buffer);
 }
+
+/* update the stopwatch value every second when the stopwatch is enabled */
 void runStopwatch(Stopwatch *stopwatch, uint32_t *lastSecond, uint32_t second) {
 	if (*lastSecond >= second) {
 		return;
