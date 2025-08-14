@@ -26,7 +26,7 @@ void generate_sound(uint16_t frequency, uint8_t duty_cycle, TIM_HandleTypeDef ht
 
 void stop_sound(TIM_HandleTypeDef htim1) {
 	/* stop the timer1 and buzzer */
-	  HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
 }
 
 void play_note(uint16_t note, uint32_t duration, uint8_t volume, TIM_HandleTypeDef htim1) {
