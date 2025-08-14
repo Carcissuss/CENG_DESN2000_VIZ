@@ -3,6 +3,7 @@
 #include "coast.h"
 #include "lcd.h"
 
+/* initialize the lcd */
 void coast_lcd_init(){
 	// 1. wait for enough time to stabilise
 	 HAL_Delay(50);
@@ -39,6 +40,7 @@ void coast_lcd_init(){
 	 LCD_SendCmd(0b00001111);
 }
 
+/* Enable for one LCD input */
 void LCD_Pulse(){
 	HAL_GPIO_WritePin(LCD_E_Port, LCD_E_Pin, 1);
 	HAL_Delay(1);
@@ -46,6 +48,7 @@ void LCD_Pulse(){
 	HAL_Delay(1);
 }
 
+/* input the values every 4 bits once */
 void LCD_PutNibble(uint8_t nibble){
 	uint8_t D4 = nibble & 1;
 	uint8_t D5 = (nibble >> 1) & 1;
@@ -57,6 +60,7 @@ void LCD_PutNibble(uint8_t nibble){
 	HAL_GPIO_WritePin(LCD_Data_Port, LCD_D7_Pin, D7? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
+/* send Command information to LCD */
 void LCD_SendCmd(uint8_t c){
 	LCD_PutNibble(c >> 4);
 	LCD_Pulse();
@@ -64,7 +68,7 @@ void LCD_SendCmd(uint8_t c){
 	LCD_Pulse();
 }
 
-
+/* Send data expected to display on LCD */
 void LCD_SendData(uint8_t c){
 	HAL_GPIO_WritePin(LCD_RS_Port, LCD_RS_Pin, 1);
 	LCD_PutNibble(c >> 4);
@@ -74,7 +78,7 @@ void LCD_SendData(uint8_t c){
 	HAL_GPIO_WritePin(LCD_RS_Port, LCD_RS_Pin, 0);
 }
 
-// send string to LCD data
+/* send in a string of information to display on the LCD */
 void LCD_SendStr(char *str){
 	for (int i = 0; str[i]; i++) {
 		if (i == 15) {
@@ -84,11 +88,4 @@ void LCD_SendStr(char *str){
 	}
 }
 
-void LCD_SendTime(const char *str) {
-	for (int i = 0; str[i]; i++) {
-		if (i == 15) {
-			LCD_SendCmd(LCD_SECOND_LINE);
-		}
-		LCD_SendData((uint8_t)str[i]);
-	}
-}
+
