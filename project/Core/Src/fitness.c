@@ -124,6 +124,11 @@ void runCountdown(Countdown *countdown, uint32_t *lastSecond, uint32_t second,
 	}
 	if (countdown->second == 0 && countdown->minute == 0) {
 		countdown->countdown_enable = false;
+		if (enable_vibration) {
+			vibration_call(STEPS_PER_REV);
+			vibration_call(STEPS_PER_REV);
+		}
+
 		if (enable_sound) {
 			play_note(460, 300, 50, htim1);
 			play_note(0, 50, 50, htim1);
@@ -138,7 +143,7 @@ void runCountdown(Countdown *countdown, uint32_t *lastSecond, uint32_t second,
 			play_note(220, 300, 50, htim1);
 			play_note(0, 50, 50, htim1);
 		}
-		if (enable_vibration) {vibration_call(STEPS_PER_REV);}
+
 		LCD_SendCmd(LCD_CLEAR_DISPLAY);
 		LCD_SendStr("Countdown Done");
 		stop_sound(htim1);
