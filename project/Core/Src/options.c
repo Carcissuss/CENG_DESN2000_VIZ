@@ -14,6 +14,7 @@ extern bool enable_sound;
 extern bool enable_vibration;
 extern volatile bool flash;
 
+/* Settings Page */
 void settingsPage() {
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
 
@@ -34,7 +35,6 @@ void settingsPage() {
  * Flashlight feature control
  *
  * */
-
 /* switch D5–D20 */
 static void switchLedBar(uint16_t value) {
     for (int i = 15; i >= 0; --i) {
@@ -46,7 +46,7 @@ static void switchLedBar(uint16_t value) {
     HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(RCLK_Latch_GPIO_Port, RCLK_Latch_Pin, GPIO_PIN_RESET);
 }
-
+/* Switches on all LED's for the flashlight*/
 void flash_on(void) {
     /* Direct LEDs D1–D4 + LD2 */
     HAL_GPIO_WritePin(LED_D1_GPIO_Port,   LED_D1_Pin,   GPIO_PIN_SET);
@@ -59,6 +59,7 @@ void flash_on(void) {
     switchLedBar(0xFFFF);
 }
 
+/* Switches off all LED's */
 void flash_off(void) {
     HAL_GPIO_WritePin(LED_D1_GPIO_Port,   LED_D1_Pin,   GPIO_PIN_RESET);
     HAL_GPIO_WritePin(LED_D2_GPIO_Port,   LED_D2_Pin,   GPIO_PIN_RESET);
