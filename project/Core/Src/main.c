@@ -156,33 +156,33 @@ static void system_clock_setup(void);
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == B1_Pin) {
-		/* B1 is pressed */
+		/* Blue button is pressed */
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0) {
 			/* sound indication */
 			if (enable_sound) generate_sound(460, 50, htim1);
-
+			/* vibration indication */
 			if (enable_vibration) {
 				vibration_call(STEPS_PER_REV);
 			}
+			/* double press check */
 			if (is_single_press[0] == true &&
 				is_double_press[0] == false &&
 				(decimal_second_count - button_double_press_time[0]) <= double_press_interval) {
 				is_double_press[0] = true;
 				is_single_press[0] = false;
 				is_holding[0] = false;
-
 			} else {
 				is_single_press[0] = true;
 				is_double_press[0] = false;
 				is_holding[0] = false;
 			}
-
+			// update the holding time
 			button_holding_time[0] = decimal_second_count;
 		}
-		/* B1 is released */
+		/* Blue button is released */
 		else {
 			stop_sound(htim1);
-
+			/* holding check */
 			if ((decimal_second_count - button_holding_time[0]) >= holding_bound) {
 				is_holding[0] = true;
 				is_double_press[0] = false;
@@ -190,6 +190,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			} else {
 				button_double_press_time[0] = decimal_second_count;
 			}
+
 			if (is_holding[0]) {
 				switch (currentScreen) {
 					case TIME:
@@ -203,7 +204,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						changeTimeMin(4);
 						break;
 				}
-
 			} else if (is_single_press[0] && !is_double_press[0]) {
 				switch (currentScreen) {
 					case HOME:
@@ -247,7 +247,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				is_double_press[1] = true;
 				is_single_press[1] = false;
 				is_holding[1] = false;
-
 			} else {
 				is_single_press[1] = true;
 				is_double_press[1] = false;
@@ -269,12 +268,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			}
 			/* navigation */
 			if (is_holding[1]) {
-				switch (currentScreen){
-				//SW1 held, BACK for ALARM // no feature here thus far
-
-				}
+				
 			} else if (is_single_press[1] && !is_double_press[1]) {
 				switch (currentScreen) {
+					/* back to previous pages */
 					case SETTINGS:
 						currentScreen = OPT;
 						break;
@@ -330,7 +327,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		        is_double_press[2] = true;
 		        is_single_press[2] = false;
 		        is_holding[2] = false;
-
 		    } else {
 		        is_single_press[2] = true;
 		        is_double_press[2] = false;
@@ -384,7 +380,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						enable_sound = !enable_sound;   // toggle first
 						screenNeedsRefresh = true;
 						break;
-				    }
+				}
 			}
 		}
 	} else {
@@ -402,7 +398,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 				is_double_press[3] = true;
 				is_single_press[3] = false;
 				is_holding[3] = false;
-
 			} else {
 				is_single_press[3] = true;
 				is_double_press[3] = false;
@@ -431,8 +426,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						resetStopwatch(&stopwatch);
 						break;
 				}
-			}
-			if (is_double_press[3]) {
+			} else if (is_double_press[3]) {
 				is_single_press[3] = false; // cancel single press
 				switch (currentScreen){
 					case ALARM:
@@ -442,9 +436,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						switchTimeAMPM();
 						break;
 				}
-			}
-			// Only act as single press if no double press
-			else if (is_single_press[3] && !is_double_press[3]) {
+			} else if (is_single_press[3] && !is_double_press[3]) {
+				// Only act as single press if no double press
 				switch (currentScreen) {
 					case HOME:
 						previousScreen = currentScreen;
@@ -494,6 +487,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			decimal_second_count++;
 		}
 		vibration_tick_1ms(); // vibration ticker
+		/* ldr changes the LED */
 		if (!flash) {
 			/* ldr running code */
 			if (period_count == dutyCycle) {
@@ -587,9 +581,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  /* update the countdown */
 	  if (countdown.countdown_enable) {
 	  	  runCountdown(&countdown, &lastCountdownSecond, seconds, htim1, enable_sound, enable_vibration);
 	  	  }
+	  /* update the stopwatch */
 	  if (stopwatch.stopwatch_enable) {
 		  runStopwatch(&stopwatch, &lastStopwatchSecond, seconds);
 	  }
@@ -612,6 +608,7 @@ int main(void)
 	      }
 	  }
 
+	  /* update the information refreshed per second and sets the page */
 	  if (currentScreen != previousScreen || timeFormatChanged || screenNeedsRefresh) {
 			LCD_SendCmd(LCD_CLEAR_DISPLAY);
 			coast_asm_delay(2);
@@ -661,7 +658,6 @@ int main(void)
 			screenNeedsRefresh = false;  // clear the flags
 			timeFormatChanged = false;  // clear the flag
 			last_tick = HAL_GetTick();
-
 	  }
 
 	  /* UPDATE TIME EVERY SECOND ELAPSED */
@@ -686,6 +682,7 @@ int main(void)
 				updateCountdown(countdown);
 				break;
 			case STOPWATCH:
+				/* if update lap or not */
 				if (lapStopwatchFlag) {
 					lapStopwatch(stopwatch);
 					lapStopwatchFlag = false;
@@ -700,14 +697,14 @@ int main(void)
 	  	}
 	  	last_tick += 1000;
 	  }
-	  /* ldr */
+	  /* ldr value */
 	  HAL_ADC_Start(&hadc2);
 	  HAL_ADC_PollForConversion(&hadc2, 1);
 	  ldrValue = HAL_ADC_GetValue(&hadc2);
 
-	  // Exponential Moving Average Filter
+	  /* Exponential Moving Average Filter */
 	  ema = alpha * ldrValue + (1 - alpha) * ema;
-
+	
 	  if (ema >= 600) {
 		  dutyCycle = 0;
 	  } else if (ema <= 100) {
@@ -1181,6 +1178,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* set the RTC detection LSE instead of LSI for more accurate time */
 void system_clock_setup() {
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -1252,3 +1250,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
