@@ -5,7 +5,9 @@
  *      Author: Vageesh Jha
  */
 
+/* Initialises states for currentScreen and previousScreen */
 #include "state.h"
 
 volatile ScreenState currentScreen = HOME;
 volatile ScreenState previousScreen = NONE;
+
