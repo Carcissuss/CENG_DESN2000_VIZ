@@ -472,10 +472,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		second++;
 	} else if (htim == &htim7) {
 		/* count every 0.1 second */
-		millisecond++;
-		if (millisecond == 1000) {
+		if (millisecond == 100) {
 			decimal_second_count++;
 			millisecond = 0;
+		} else {
+			millisecond++;
 		}
 		/* ldr change ambient light frequency counting */
 		if (period_count = 100) {
@@ -846,7 +847,7 @@ static void MX_RTC_Init(void)
   /** Initialize RTC and set the Time and Date
   */
   sTime.Hours = 0x8;
-  sTime.Minutes = 0x30;
+  sTime.Minutes = 0x34;
   sTime.Seconds = 0x0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -872,12 +873,12 @@ static void MX_RTC_Init(void)
   sAlarm.AlarmTime.SubSeconds = 0x0;
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
+  sAlarm.AlarmMask = RTC_ALARMMASK_DATEWEEKDAY;
   sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
   sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
   sAlarm.AlarmDateWeekDay = 0x1;
   sAlarm.Alarm = RTC_ALARM_A;
-  if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
   {
     Error_Handler();
   }
@@ -1030,7 +1031,7 @@ static void MX_TIM7_Init(void)
 
   /* USER CODE END TIM7_Init 1 */
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 99;
+  htim7.Init.Prescaler = 999;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 71;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -1160,36 +1161,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//static inline uint8_t LDR_to_Duty(uint16_t ldrValue)
-//{
-//    // 1) 一阶IIR低通：y += a*(x - y)
-//    float x = (float)ldrValue;
-//    if (!s_inited) { s_ldr_filt = x; s_inited = 1; }
-//    else           { s_ldr_filt += ALPHA * (x - s_ldr_filt); }
-//
-//    // 2) 归一化并映射到 duty 范围
-//    float norm = s_ldr_filt / ADC_MAX;
-//    if (norm < 0) norm = 0; if (norm > 1) norm = 1;
-//
-//    float duty_target;
-//#if INVERT
-//    duty_target = DUTY_MAX - norm * (DUTY_MAX - DUTY_MIN);
-//#else
-//    duty_target = DUTY_MIN + norm * (DUTY_MAX - DUTY_MIN);
-//#endif
-//
-//    // 3) 限速（slew rate）
-//    float diff = duty_target - s_duty;
-//    if      (diff >  SLEW_STEP) s_duty += SLEW_STEP;
-//    else if (diff < -SLEW_STEP) s_duty -= SLEW_STEP;
-//    else                        s_duty  = duty_target;
-//
-//    // 4) 限幅到 0..100 再返回 uint8_t
-//    if (s_duty < 0.f)    s_duty = 0.f;
-//    if (s_duty > 100.f)  s_duty = 100.f;
-//
-//    return (uint8_t)(s_duty + 0.5f); // 四舍五入为 0..100
-//}
 
 void system_clock_setup() {
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};

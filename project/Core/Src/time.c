@@ -9,6 +9,7 @@ extern RTC_AlarmTypeDef sAlarm;
 
 bool is_24_hour_format = true;
 extern bool timeFormatChanged;
+extern void coast_asm_delay(uint32_t milliseconds);
 
 void timePage() {
 	LCD_SendCmd(LCD_CLEAR_DISPLAY);
